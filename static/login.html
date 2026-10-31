@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Anmelden – Digimon-Partner</title>
+<link rel="icon" href="/static/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<meta name="theme-color" content="#0c0d0f">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Russo+One&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+<style>
+  body { overflow: auto; }
+  .gate { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; padding: 14px; }
+  .gate .art { background: #3fb0f2; border-radius: 28px; display: grid; place-items: center; padding: 32px; }
+  .gate .art svg { width: min(46%, 260px); fill: #0c0d0f; }
+  .gate .art .band { fill: #3fb0f2; }
+  .gate form { align-self: center; justify-self: center; width: min(400px, 100% - 32px); display: flex; flex-direction: column; gap: 16px; padding: 32px 0; }
+  .gate h1 { font: 400 40px/1.05 var(--game); }
+  .gate .tabs { margin-top: 4px; }
+  .gate label { display: flex; flex-direction: column; gap: 8px; font-weight: 500; }
+  .err { min-height: 20px; color: var(--negative); }
+  @media (max-width: 760px) {
+    .gate { grid-template-columns: minmax(0, 1fr); padding: 10px; }
+    .gate .art { min-height: 30vh; border-radius: 22px; }
+    .gate h1 { font-size: 30px; }
+    .gate .tabs { position: static; }
+  }
+</style>
+</head>
+<body>
+<main class="gate">
+  <div class="art" aria-hidden="true">
+    <svg viewBox="0 0 32 32"><path d="M16 3c5.5 0 9.5 6.5 9.5 14S21.5 29 16 29 6.5 24.5 6.5 17 10.5 3 16 3z"/><path d="M7.6 14.5l4-2.6 4.4 2.6 4.4-2.6 4 2.6v3.6l-4-2.6-4.4 2.6-4.4-2.6-4 2.6z" class="band"/></svg>
+  </div>
+  <form id="form">
+    <h1>Dein Digimon wartet.</h1>
+    <p class="caption" id="hint"></p>
+    <nav class="tabs" id="tabs" aria-label="Anmelden oder neues Konto">
+      <button type="button" data-mode="login" aria-current="page">Anmelden</button>
+      <button type="button" data-mode="register">Neues Konto</button>
+    </nav>
+    <label>Name <input class="input" name="name" autocomplete="username" required></label>
+    <label>Passwort <input class="input" name="password" type="password" autocomplete="current-password" required aria-describedby="pw-rule"></label>
+    <p class="caption" id="pw-rule" hidden>Mindestens 8 Zeichen.</p>
+    <label id="codefield" hidden>Einladungscode <input class="input" name="code" placeholder="1A2B-3C4D-5E6F" autocomplete="off"></label>
+    <p class="err" id="err" role="alert"></p>
+    <button class="btn btn--primary btn--wide" type="submit" id="go">Los geht's</button>
+  </form>
+</main>
+<script src="/static/login.js"></script>
+</body>
+</html>

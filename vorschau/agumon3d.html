@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agumon 3D · Test</title>
+<link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Rubik:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root { --night: #070f2e; --deep: #0d2366; --cyan: #2fd3ff; --sun: #ffb21e; --paper: #f2f7ff; --ink: #050a1f; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { background: var(--night); color: var(--paper); font: 500 15px/1.4 "Rubik", system-ui, sans-serif; overflow: hidden; }
+  canvas { display: block; }
+  .ui { position: fixed; left: 16px; top: 16px; bottom: 16px; width: min(330px, calc(100vw - 32px)); display: flex; flex-direction: column; gap: 10px;
+    padding: 16px; background: rgba(5, 10, 31, .78); border: 2px solid rgba(47, 211, 255, .5); overflow-y: auto;
+    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px)); }
+  h1 { font: 400 26px "Russo One", sans-serif; text-shadow: 3px 3px 0 #1746c9; }
+  .k { font-weight: 700; font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--cyan); margin-top: 6px; }
+  .row { display: flex; flex-wrap: wrap; gap: 6px; }
+  button { font: 700 13px "Rubik", sans-serif; color: var(--paper); cursor: pointer; padding: 7px 10px 6px; background: rgba(255, 255, 255, .08);
+    border: 2px solid rgba(255, 255, 255, .22); clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%); }
+  button[aria-pressed="true"] { background: var(--sun); color: var(--ink); border-color: var(--sun); }
+  .note { font-size: 12px; color: #9fb3e6; }
+  #status { font-size: 13px; color: var(--sun); }
+</style>
+<script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
+               "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/" } }
+</script>
+</head>
+<body>
+<div class="ui">
+  <h1>AGUMON 3D</h1>
+  <p class="note">Machbarkeitstest: Modell und Animationen aus Digimon World Next Order (eigene Steam-Kopie, nur privat).</p>
+  <p id="status">Lade …</p>
+  <span class="k">Partner-Animationen</span>
+  <div class="row" id="main"></div>
+  <span class="k">Alle Animationen aus dem Spiel</span>
+  <div class="row" id="all"></div>
+  <span class="k">Augen</span>
+  <div class="row" id="eyes">
+    <button data-eye="0,0.5" aria-pressed="true">Offen</button><button data-eye="0.5,0.5">Wütend</button>
+    <button data-eye="0,0">Zu</button><button data-eye="0.5,0">Fröhlich</button>
+  </div>
+  <span class="k">Darstellung</span>
+  <div class="row"><button id="toon" aria-pressed="true">Anime-Look</button><button id="spin">Drehen</button></div>
+</div>
+<script type="module">
+import * as THREE from "three";
+import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+const BASE = "../_spieldaten/export/agumon/";
+// Spielnamen -> was es (vermutlich) ist; die feel_*-Gefühle sind geraten und werden im Test benannt
+const LABELS = {
+  a0_base_fa0_ul: "Stehen", a0_base_fb0_ul: "Stehen 2", a0_walk_fa0_ul: "Gehen", a0_run__fa0_ul: "Rennen",
+  a0_eat__fa0_un: "Essen", a0_rest_fa0_un: "Ausruhen", a0_feel_fa0_ul: "Gefühl A", a0_feel_fb0_ul: "Gefühl B",
+  a0_feel_fc0_ul: "Gefühl C", a0_feel_fd0_un: "Gefühl D", a0_feel_fe0_un: "Gefühl E", a0_feel_ff0_un: "Gefühl F",
+  a0_feel_fg0_un: "Gefühl G", a0_feel_fh0_un: "Gefühl H", a0_feel_fi0_un: "Gefühl I", a0_jump_fa1_un: "Springen",
+  a0_atck_fa0_un: "Angriff", a0_spat_fa0_un: "Spezialangriff", a0_prov_fa0_un: "Provozieren", a0_getu_fa0_un: "Aufstehen",
+};
+const MAIN = ["a0_base_fa0_ul", "a0_eat__fa0_un", "a0_rest_fa0_un", "a0_walk_fa0_ul", "a0_feel_fa0_ul", "a0_feel_fd0_un", "a0_feel_fh0_un", "a0_spat_fa0_un"];
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color("#3fb6ff");
+scene.fog = new THREE.Fog("#9fdcff", 6, 22);
+const camera = new THREE.PerspectiveCamera(35, innerWidth / innerHeight, 0.01, 100);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+scene.add(new THREE.HemisphereLight("#ffffff", "#5577aa", 1.6));
+const sun = new THREE.DirectionalLight("#ffffff", 2.2);
+sun.position.set(2, 4, 3);
+scene.add(sun);
+const grid = new THREE.GridHelper(40, 40, "#ffffff", "#ffffff");
+grid.material.opacity = 0.45; grid.material.transparent = true;
+scene.add(grid);
+const floor = new THREE.Mesh(new THREE.CircleGeometry(40, 64), new THREE.MeshBasicMaterial({ color: "#1b63e0" }));
+floor.rotation.x = -Math.PI / 2; floor.position.y = -0.002;
+scene.add(floor);
+
+const tex = new THREE.TextureLoader();
+const load = (name, srgb = true) => new Promise((ok) => tex.load(BASE + "FBX_Animator/c001/" + name, (t) => {
+  t.flipY = true; if (srgb) t.colorSpace = THREE.SRGBColorSpace; ok(t);
+}));
+
+/** Toon-Material wie im Spiel: Körperfarbe (UV0), Augen aus der Augen-Textur (UV1, Viertel oben links), Ramp als Stufen. */
+function toonMaterial(main, eye, ramp) {
+  ramp.minFilter = ramp.magFilter = THREE.NearestFilter;
+  eye.generateMipmaps = false;           // Mipmaps würden die vier Ausdrücke ineinander verschmieren
+  eye.minFilter = THREE.LinearFilter;
+  const m = new THREE.MeshToonMaterial({ map: main, gradientMap: ramp });
+  m.userData.eyeOffset = { value: new THREE.Vector2(0, 0.5) };
+  m.userData.eyeMode = { value: 0 };   // 0 = überblenden (wie im Spiel), 1 = Viertel deckend (Test)
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.eyeTex = { value: eye };
+    sh.uniforms.eyeOffset = m.userData.eyeOffset;
+    sh.vertexShader = sh.vertexShader
+      .replace("#include <common>", "#include <common>\nattribute vec3 eyeUv;\nvarying vec3 vEyeUv;")
+      .replace("#include <uv_vertex>", "#include <uv_vertex>\nvEyeUv = eyeUv;");
+    // Nur auf den Augen-Polygonen (z = 1): Augen-Textur über die Haut legen, so weit ihre Transparenz reicht
+    // (wie im Spiel – unter den Augen ist die Körpertextur normal bemalt). Leicht vom Viertel-Rand weg,
+    // damit nichts vom Nachbar-Ausdruck durchsickert.
+    sh.uniforms.eyeMode = m.userData.eyeMode;
+    sh.fragmentShader = sh.fragmentShader
+      .replace("#include <common>", "#include <common>\nuniform sampler2D eyeTex;\nuniform vec2 eyeOffset;\nuniform float eyeMode;\nvarying vec3 vEyeUv;")
+      .replace("#include <map_fragment>", `#include <map_fragment>
+        if (vEyeUv.z > 0.5) {
+          vec4 e = texture2D(eyeTex, clamp(vEyeUv.xy, 0.004, 0.996) * 0.5 + eyeOffset);
+          diffuseColor.rgb = eyeMode > 1.5 ? vec3(1.0, 0.0, 1.0) * (0.4 + 0.6 * e.a)
+                           : eyeMode > 0.5 ? e.rgb : mix(diffuseColor.rgb, e.rgb, e.a);
+        }`);
+  };
+  return m;
+}
+
+const status = document.getElementById("status");
+let mixer, model, actions = {}, current, toonMat, plainMat, spin = false;
+
+const [fbx, anims, uvs, main, eye, ramp] = await Promise.all([
+  new FBXLoader().loadAsync(BASE + "FBX_Animator/c001/c001.fbx"),
+  fetch(BASE + "anim.json").then((r) => r.json()),
+  fetch(BASE + "uv.json").then((r) => r.json()),
+  load("c001_c00.png"), load("c001_e00.png"), load("c001_r00.png", false),
+]);
+model = fbx;
+toonMat = toonMaterial(main, eye, ramp);
+plainMat = new THREE.MeshLambertMaterial({ map: main });
+/** Zweite UV (Augen) aus uv.json über die erste UV den FBX-Punkten zuordnen.
+ *  Unity und FBX zählen v evtl. andersherum – es wird die Richtung mit mehr Treffern genommen. */
+function addEyeUv(geo) {
+  // Je Dreieck zuordnen: am Augenrand gibt es Punkte mit gleicher erster UV, aber anderer zweiter –
+  // ein Dreieck ist über seine drei Ecken trotzdem eindeutig.
+  const G = 1000;
+  const ck = (u, v) => `${Math.round(u * G)},${Math.round(v * G)}`;
+  const table = new Map();
+  for (let t = 0; t < uvs.eye.length; t++) {
+    const corners = [0, 1, 2].map((c) => {
+      const o = (t * 3 + c) * 4;
+      return { key: ck(uvs.tris[o], uvs.tris[o + 1]), uv1: [uvs.tris[o + 2], uvs.tris[o + 3]] };
+    });
+    const key = corners.map((c) => c.key).sort().join("|");
+    if (!table.has(key)) table.set(key, { corners, eye: uvs.eye[t] });
+  }
+  const uv = geo.attributes.uv, n = uv.count;
+  const idx = geo.index ? (i) => geo.index.getX(i) : (i) => i;
+  const tri = geo.index ? geo.index.count : n;
+  const tryFlip = (flip) => {
+    const out = new Float32Array(n * 3); let hits = 0;
+    for (let t = 0; t < tri; t += 3) {
+      const ids = [idx(t), idx(t + 1), idx(t + 2)];
+      const keys = ids.map((i) => ck(uv.getX(i), flip ? 1 - uv.getY(i) : uv.getY(i)));
+      const hit = table.get([...keys].sort().join("|"));
+      if (!hit) continue;
+      hits++;
+      ids.forEach((i, c) => {
+        const corner = hit.corners.find((x) => x.key === keys[c]) || hit.corners[c];
+        out.set([corner.uv1[0], corner.uv1[1], hit.eye], i * 3);
+      });
+    }
+    return { out, hits };
+  };
+  const a = tryFlip(false), b = tryFlip(true), best = a.hits >= b.hits ? a : b;
+  geo.setAttribute("eyeUv", new THREE.BufferAttribute(best.out, 3));
+  return `${best.hits}/${tri / 3} Dreiecke`;
+}
+let eyeInfo = "";
+model.traverse((o) => { if (o.isMesh) { eyeInfo = addEyeUv(o.geometry); o.material = toonMat; o.frustumCulled = false; } });
+scene.add(model);
+
+// Größe/Kamera an das Modell anpassen
+const box = new THREE.Box3().setFromObject(model);
+const size = box.getSize(new THREE.Vector3()), center = box.getCenter(new THREE.Vector3());
+model.position.y -= box.min.y;
+camera.position.set(center.x + size.y * 1.1, size.y * 0.75, center.z + size.y * 2.4);
+controls.target.set(center.x, size.y * 0.5, center.z);
+camera.near = size.y / 100; camera.far = size.y * 60; camera.updateProjectionMatrix();
+grid.scale.setScalar(size.y / 1.2); floor.scale.setScalar(size.y / 1.2);
+scene.fog.near = size.y * 4; scene.fog.far = size.y * 16;
+
+// Knochen finden + Maßstab der Positionen (Spiel-Einheiten vs. FBX-Einheiten) bestimmen
+const bones = {};
+model.traverse((o) => { if (o.isBone || o.type === "Object3D") bones[o.name] = o; });
+const ratios = [];
+for (const clip of anims.clips) for (const t of clip.tracks) {
+  const b = bones[t.bone];
+  if (t.type !== "position" || !b) continue;
+  const v = new THREE.Vector3(t.values[0], t.values[1], t.values[2]);
+  if (v.length() > 1e-4 && b.position.length() > 1e-4) ratios.push(b.position.length() / v.length());
+}
+ratios.sort((a, b) => a - b);
+const scale = ratios.length ? ratios[ratios.length >> 1] : 1;
+
+mixer = new THREE.AnimationMixer(model);
+let missing = new Set();
+for (const clip of anims.clips) {
+  const n = Math.round(clip.duration * clip.fps) + 1;
+  const times = Array.from({ length: n }, (_, i) => i / clip.fps);
+  const tracks = [];
+  for (const t of clip.tracks) {
+    if (!bones[t.bone]) { missing.add(t.bone); continue; }
+    const name = THREE.PropertyBinding.sanitizeNodeName(t.bone);
+    if (t.type === "quaternion") tracks.push(new THREE.QuaternionKeyframeTrack(`${name}.quaternion`, times, t.values));
+    else if (t.type === "position") tracks.push(new THREE.VectorKeyframeTrack(`${name}.position`, times, t.values.map((v) => v * scale)));
+    else tracks.push(new THREE.VectorKeyframeTrack(`${name}.scale`, times, t.values));
+  }
+  if (!tracks.length) continue;
+  const c = new THREE.AnimationClip(clip.name, clip.duration, tracks);
+  actions[clip.name] = mixer.clipAction(c);
+}
+
+function play(name) {
+  const next = actions[name];
+  if (!next) return;
+  next.reset().setLoop(THREE.LoopRepeat).play();
+  if (current && current !== next) current.crossFadeTo(next, 0.25, false);
+  current = next;
+  document.querySelectorAll("[data-a]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.a === name)));
+  status.textContent = `Spielt: ${LABELS[name] || name}`;
+}
+
+const btn = (name) => `<button data-a="${name}">${LABELS[name] || name.replace(/^a0_/, "")}</button>`;
+document.getElementById("main").innerHTML = MAIN.filter((n) => actions[n]).map(btn).join("");
+document.getElementById("all").innerHTML = Object.keys(actions).sort().map(btn).join("");
+document.addEventListener("click", (e) => { const b = e.target.closest("[data-a]"); if (b) play(b.dataset.a); });
+// Augen-Ausdruck = welches Viertel der Augen-Textur gezeigt wird
+function setEyes(offset) {
+  const [x, y] = offset.split(",").map(Number);
+  toonMat.userData.eyeOffset.value.set(x, y);
+  document.querySelectorAll("[data-eye]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.eye === offset)));
+}
+document.getElementById("eyes").onclick = (e) => { const b = e.target.closest("[data-eye]"); if (b) setEyes(b.dataset.eye); };
+window.__eyes = setEyes;
+window.__eyeMode = (v) => { toonMat.userData.eyeMode.value = v; };
+document.getElementById("toon").onclick = (e) => {
+  const on = e.currentTarget.getAttribute("aria-pressed") !== "true";
+  e.currentTarget.setAttribute("aria-pressed", String(on));
+  model.traverse((o) => { if (o.isMesh) o.material = on ? toonMat : plainMat; });
+};
+document.getElementById("spin").onclick = (e) => { spin = !spin; e.currentTarget.setAttribute("aria-pressed", String(spin)); };
+
+play("a0_base_fa0_ul");
+status.textContent += ` · ${Object.keys(actions).length} Animationen · Augen-UV ${eyeInfo} · Maßstab ${scale.toFixed(3)}` + (missing.size ? ` · fehlende Knochen: ${missing.size}` : "");
+window.__model = model;
+window.__cam = (az, el, dist) => {   // Test: Kamera um den Kopf kreisen lassen
+  const head = new THREE.Vector3(); (bones.J_head || model).getWorldPosition(head);
+  controls.target.copy(head);
+  camera.position.set(head.x + Math.sin(az) * Math.cos(el) * dist, head.y + Math.sin(el) * dist, head.z + Math.cos(az) * Math.cos(el) * dist);
+  controls.update();
+};
+window.__ready = true;
+window.__play = play;
+
+const clock = new THREE.Clock();
+renderer.setAnimationLoop(() => {
+  const dt = clock.getDelta();
+  mixer.update(dt);
+  if (spin) model.rotation.y += dt * 0.6;
+  controls.update();
+  renderer.render(scene, camera);
+});
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>

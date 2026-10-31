@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Normal läuft alles über HTTPS. Unverschlüsselt nur erlaubt, damit man die App
+     zum Testen gegen den PC im Heim-WLAN bauen kann (bauen.ps1 -Url http://...). -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

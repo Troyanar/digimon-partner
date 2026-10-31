@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ground">#FF0C0D0F</color>
+    <color name="sky">#FF3FB0F2</color>
+
+    <style name="Theme.Geraet" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/ground</item>
+        <item name="android:statusBarColor">@color/ground</item>
+        <item name="android:navigationBarColor">@color/ground</item>
+    </style>
+</resources>

@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Digimon-Partner · Vorschau</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Rubik:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --night: #070f2e;
+  --deep: #0d2366;
+  --blue: #1746c9;
+  --cyan: #2fd3ff;
+  --sun: #ffb21e;
+  --pink: #ff4f8b;
+  --lime: #a6ff3a;
+  --paper: #f2f7ff;
+  --ink: #050a1f;
+  --muted: #9fb3e6;
+  --cut: 14px;
+  --head: "Russo One", "Arial Black", sans-serif;
+  --body: "Rubik", system-ui, sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { background: var(--night); color: var(--paper); font: 500 16px/1.4 var(--body); overflow-x: hidden; }
+button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
+
+/* Desktop: Welt füllt immer genau den Bildschirm, nur die Seitenleiste scrollt */
+.app { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(360px, 1fr); height: 100vh; }
+.app > .panel { overflow-y: auto; }
+
+/* ═════════════ Die Welt ═════════════ */
+.world { position: relative; overflow: hidden; isolation: isolate; height: 100%;
+  --sky-a: #36b9ff; --sky-b: #b9ecff; --horizon: #fff6c9; --grid: rgba(255, 255, 255, .55); --floor: #1b63e0; }
+.world[data-time="dusk"] { --sky-a: #3a1f7a; --sky-b: #ff8a5c; --horizon: #ffd27a; --grid: rgba(255, 210, 140, .5); --floor: #4b2a8c; }
+.world[data-time="night"] { --sky-a: #030820; --sky-b: #12307a; --horizon: #4fd8ff; --grid: rgba(47, 211, 255, .45); --floor: #071a52; }
+.sky { position: absolute; inset: 0; background: linear-gradient(180deg, var(--sky-a) 0%, var(--sky-b) 58%, var(--horizon) 60%, var(--floor) 61%); transition: background 1.2s; z-index: -3; }
+.stars { position: absolute; inset: 0 0 40% 0; opacity: 0; transition: opacity 1.2s; z-index: -3;
+  background: radial-gradient(1.5px 1.5px at 12% 20%, #fff, transparent), radial-gradient(1px 1px at 30% 8%, #fff, transparent),
+    radial-gradient(2px 2px at 48% 26%, #bdf3ff, transparent), radial-gradient(1px 1px at 63% 12%, #fff, transparent),
+    radial-gradient(1.5px 1.5px at 80% 30%, #fff, transparent), radial-gradient(1px 1px at 90% 6%, #fff, transparent),
+    radial-gradient(1px 1px at 22% 40%, #fff, transparent), radial-gradient(1.5px 1.5px at 72% 44%, #9ff, transparent); }
+.world[data-time="night"] .stars { opacity: 1; }
+/* Sonne/Mond: großer Datenkreis am Horizont */
+.orb { position: absolute; left: 68%; top: 34%; width: 150px; height: 150px; border-radius: 50%; z-index: -3; transition: all 1.2s;
+  background: radial-gradient(circle at 40% 40%, #fff, #ffe48a 45%, #ffb21e 70%); box-shadow: 0 0 80px 20px rgba(255, 220, 120, .55); }
+.world[data-time="dusk"] .orb { top: 47%; background: radial-gradient(circle, #fff3c4, #ff9a4d 60%, #ff4f8b); box-shadow: 0 0 90px 30px rgba(255, 110, 90, .5); }
+.world[data-time="night"] .orb { width: 90px; height: 90px; top: 14%; left: 74%; background: radial-gradient(circle at 35% 35%, #fff, #cfe9ff 60%, #7fb8ff); box-shadow: 0 0 60px 10px rgba(130, 200, 255, .5); }
+
+/* Gitterboden mit Perspektive, läuft auf einen zu */
+.floor { position: absolute; left: -50%; right: -50%; top: 60%; bottom: 0; perspective: 300px; perspective-origin: 50% 0; z-index: -2; }
+.floor::before { content: ""; position: absolute; inset: 0 0 -120% 0; transform: rotateX(72deg); transform-origin: 50% 0;
+  background:
+    linear-gradient(90deg, var(--grid) 2px, transparent 2px) 0 0 / 80px 80px,
+    linear-gradient(0deg, var(--grid) 2px, transparent 2px) 0 0 / 80px 80px;
+  animation: run 2.4s linear infinite; }
+.floor::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, var(--horizon) 0%, transparent 18%); opacity: .7; }
+@keyframes run { to { background-position: 0 80px, 0 80px; } }
+.world.rush .floor::before { animation-duration: .25s; }
+
+canvas.rain { position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: .35; mix-blend-mode: screen; }
+.world.rush canvas.rain { opacity: .9; }
+
+/* Kopfzeile in der Welt */
+.topbar { position: absolute; left: 0; right: 0; top: 0; display: flex; justify-content: space-between; align-items: flex-start; padding: 18px 22px; z-index: 5; }
+.brand { font: 400 22px/1 var(--head); letter-spacing: .04em; color: #fff; text-shadow: 3px 3px 0 var(--deep); }
+.brand small { display: block; margin-top: 6px; font: 700 11px var(--body); letter-spacing: .25em; color: var(--deep); text-shadow: none;
+  background: var(--sun); padding: 3px 8px; width: max-content; clip-path: polygon(0 0, 100% 0, 92% 100%, 0 100%); }
+.clock { font: 400 18px var(--head); color: #fff; text-shadow: 2px 2px 0 var(--deep); text-align: right; }
+.clock small { display: block; font: 700 12px var(--body); letter-spacing: .1em; }
+
+/* Bühne mit dem Digimon */
+.stage { position: absolute; left: 50%; bottom: 9%; width: min(52vh, 440px); aspect-ratio: 1; transform: translateX(-50%); z-index: 2; }
+.pad { position: absolute; left: 6%; right: 6%; bottom: -4%; height: 22%; border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(47, 211, 255, .65), rgba(47, 211, 255, .15) 55%, transparent 70%);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, .5) inset; animation: padglow 3s ease-in-out infinite; }
+.pad::before { content: ""; position: absolute; inset: 22% 18%; border-radius: 50%; background: rgba(5, 10, 31, .45); filter: blur(6px); }
+@keyframes padglow { 50% { box-shadow: 0 0 0 3px rgba(255, 255, 255, .9) inset, 0 0 40px rgba(47, 211, 255, .6); } }
+.mon { position: absolute; inset: 0; transform-origin: 50% 96%; animation: breathe 3.2s ease-in-out infinite; }
+.mon img { width: 100%; height: 100%; object-fit: contain; display: block; filter: drop-shadow(0 6px 0 rgba(5, 10, 31, .25)); transition: filter .4s; user-select: none; -webkit-user-drag: none; }
+@keyframes breathe { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.012, 1.035); } }
+
+/* Stimmungen */
+.mon.eat { animation: chomp .32s ease-in-out 5; }
+@keyframes chomp { 50% { transform: scale(1.06, .9); } }
+.mon.drink { animation: drink 1.6s ease-in-out 1; }
+@keyframes drink { 30%, 70% { transform: rotate(-7deg) translateY(-4px); } }
+.mon.happy { animation: hop .55s cubic-bezier(.3, .7, .4, 1) 3; }
+@keyframes hop { 0%, 100% { transform: translateY(0) scale(1.05, .93); } 15% { transform: scale(.95, 1.06); } 50% { transform: translateY(-16%) scale(.97, 1.04); } 85% { transform: translateY(0) scale(1.06, .92); } }
+.mon.hungry { animation: sulk 2.6s ease-in-out infinite; }
+.mon.hungry img { filter: saturate(.55) brightness(.92) drop-shadow(0 6px 0 rgba(5, 10, 31, .25)); }
+@keyframes sulk { 0%, 100% { transform: rotate(-2deg) translateY(2%); } 50% { transform: rotate(2deg) translateY(3%) scale(1, .97); } }
+.mon.sleep { animation: snooze 4.5s ease-in-out infinite; }
+.mon.sleep img { filter: brightness(.75) saturate(.8) drop-shadow(0 6px 0 rgba(5, 10, 31, .25)); }
+@keyframes snooze { 0%, 100% { transform: rotate(5deg) translateY(4%) scale(1, .97); } 50% { transform: rotate(5deg) translateY(4%) scale(1.02, 1.01); } }
+.mon.train { animation: punch .18s ease-in-out infinite alternate; }
+@keyframes punch { from { transform: translateX(-4%) rotate(-3deg); } to { transform: translateX(5%) rotate(3deg) scale(1.03); } }
+
+/* Digitation */
+.mon.glow img { filter: brightness(0) invert(1) drop-shadow(0 0 18px #fff) drop-shadow(0 0 40px var(--cyan)); }
+.mon.spin { animation: dspin .9s ease-in infinite; }
+@keyframes dspin { 0% { transform: scale(1) rotateY(0); } 50% { transform: scale(1.08) rotateY(180deg); } 100% { transform: scale(1) rotateY(360deg); } }
+.ring { position: absolute; left: 50%; top: 55%; width: 40%; aspect-ratio: 1; border: 4px solid var(--cyan); border-radius: 50%;
+  transform: translate(-50%, -50%) scale(.3); opacity: 0; pointer-events: none; animation: ring 1.1s ease-out forwards; box-shadow: 0 0 20px var(--cyan); }
+@keyframes ring { 30% { opacity: 1; } to { transform: translate(-50%, -50%) scale(3.4); opacity: 0; } }
+.flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 8; }
+.flash.go { animation: flash .9s ease-out; }
+@keyframes flash { 10% { opacity: 1; } to { opacity: 0; } }
+.dark { position: absolute; inset: 0; background: radial-gradient(circle at 50% 70%, rgba(13, 35, 102, .2), rgba(3, 6, 20, .92) 70%); opacity: 0; transition: opacity .6s; z-index: 1; pointer-events: none; }
+.world.rush .dark { opacity: 1; }
+.banner { position: absolute; left: 0; right: 0; top: 24%; text-align: center; z-index: 9; pointer-events: none; }
+.banner span { display: inline-block; padding: 10px 28px 8px; font: 400 clamp(22px, 3.6vw, 44px)/1.1 var(--head); color: #fff; letter-spacing: .03em;
+  background: var(--blue); clip-path: polygon(3% 0, 100% 0, 97% 100%, 0 100%); text-shadow: 3px 3px 0 var(--ink);
+  transform: translateX(-120vw); }
+.banner span.in { animation: slide 2.2s cubic-bezier(.2, .9, .3, 1) forwards; }
+.banner span.big { background: var(--sun); color: var(--ink); text-shadow: 3px 3px 0 #fff; font-size: clamp(34px, 6vw, 76px); }
+@keyframes slide { 0% { transform: translateX(-120vw) skewX(-12deg); } 18%, 82% { transform: translateX(0) skewX(-12deg); } 100% { transform: translateX(120vw) skewX(-12deg); } }
+
+/* Schwebende Effekte (Herzen, Zzz, +1 Kraft …) */
+.fx { position: absolute; z-index: 6; pointer-events: none; font: 400 22px var(--head); color: #fff; text-shadow: 2px 2px 0 var(--ink); white-space: nowrap; animation: rise 1.8s ease-out forwards; }
+.fx.big { font-size: 40px; }
+.fx.stat { padding: 4px 10px; background: var(--sun); color: var(--ink); text-shadow: none; font-size: 16px; clip-path: polygon(6% 0, 100% 0, 94% 100%, 0 100%); }
+@keyframes rise { 0% { opacity: 0; transform: translateY(10px) scale(.6); } 15% { opacity: 1; transform: translateY(0) scale(1.1); } 100% { opacity: 0; transform: translateY(-90px) scale(1); } }
+.fx.drop { animation: drop .7s cubic-bezier(.5, 0, 1, .6) forwards; font-size: 46px; }
+@keyframes drop { 0% { transform: translateY(-200px) rotate(-20deg); opacity: 1; } 85% { opacity: 1; } 100% { transform: translateY(0) scale(.4) rotate(10deg); opacity: 0; } }
+.fx.zz { animation: zz 2.4s ease-out forwards; font-size: 30px; color: var(--paper); }
+@keyframes zz { 0% { opacity: 0; transform: translate(0, 0) scale(.6); } 20% { opacity: 1; } 100% { opacity: 0; transform: translate(50px, -110px) scale(1.4); } }
+.speed { position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: 0; transition: opacity .3s;
+  background: repeating-linear-gradient(0deg, transparent 0 22px, rgba(255, 255, 255, .55) 22px 24px, transparent 24px 60px);
+  -webkit-mask: radial-gradient(circle at 50% 70%, transparent 28%, #000 60%); mask: radial-gradient(circle at 50% 70%, transparent 28%, #000 60%);
+  animation: speed .2s linear infinite; }
+.world.training .speed { opacity: .7; }
+@keyframes speed { to { background-position: 60px 0; } }
+
+/* ═════════════ Seitenleiste: Digivice-Daten ═════════════ */
+.panel { position: relative; display: flex; flex-direction: column; gap: 18px; padding: 26px 24px 30px; background:
+  linear-gradient(180deg, var(--deep), var(--night) 70%); border-left: 4px solid var(--cyan); }
+.panel::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .18;
+  background: repeating-linear-gradient(0deg, transparent 0 3px, rgba(47, 211, 255, .5) 3px 4px); }
+.slab { position: relative; background: rgba(5, 10, 31, .55); border: 2px solid rgba(47, 211, 255, .5); padding: 16px 18px;
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, var(--cut) 100%, 0 calc(100% - var(--cut))); }
+.k { display: block; margin-bottom: 10px; font: 800 11px var(--body); letter-spacing: .22em; text-transform: uppercase; color: var(--cyan); }
+
+.who { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.who h1 { font: 400 clamp(34px, 3.6vw, 54px)/.95 var(--head); color: #fff; text-shadow: 4px 4px 0 var(--blue); word-break: break-word; }
+.stage-tag { flex: none; padding: 6px 12px 5px; font: 800 13px var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--ink); background: var(--lime);
+  clip-path: polygon(8% 0, 100% 0, 92% 100%, 0 100%); }
+.sub { margin-top: 8px; color: var(--muted); font-size: 14px; }
+.track { display: flex; gap: 4px; margin-top: 12px; }
+.track i { flex: 1; height: 8px; background: rgba(255, 255, 255, .12); }
+.track i.on { background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
+
+.stats { display: grid; gap: 11px; }
+.stat { display: grid; grid-template-columns: 26px 92px minmax(0, 1fr) 34px; align-items: center; gap: 8px; }
+.stat .ic { font-size: 19px; text-align: center; }
+.stat .nm { font-weight: 700; font-size: 14px; }
+.stat .val { font: 400 14px var(--head); text-align: right; color: var(--muted); }
+.bar { display: grid; grid-template-columns: repeat(10, 1fr); gap: 3px; }
+.bar i { height: 14px; background: rgba(255, 255, 255, .1); transform: skewX(-14deg); transition: background .3s; }
+.bar i.on { background: var(--c); box-shadow: 0 0 6px var(--c); }
+.stat.low .nm { color: var(--pink); }
+
+.quick { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.qb { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px 4px 11px; background: var(--blue); color: #fff; font-weight: 700; font-size: 13px;
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px)); transition: transform .12s, background .2s; }
+.qb b { font-size: 26px; line-height: 1; }
+.qb:hover { background: var(--cyan); color: var(--ink); }
+.qb:active { transform: scale(.95); }
+.qb.on { background: var(--sun); color: var(--ink); }
+
+.fast { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 16px; align-items: center; }
+.fast svg { width: 96px; height: 96px; transform: rotate(-90deg); }
+.fast .t { font: 400 26px var(--head); }
+.fast .s { color: var(--muted); font-size: 13px; }
+
+.demo { border-color: rgba(255, 178, 30, .7); }
+.demo .k { color: var(--sun); }
+.row { display: flex; flex-wrap: wrap; gap: 6px; }
+.row + .k { margin-top: 14px; }
+.chip { padding: 7px 11px 6px; font-weight: 700; font-size: 13px; background: rgba(255, 255, 255, .08); border: 2px solid rgba(255, 255, 255, .22);
+  clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%); transition: background .15s; }
+.chip:hover { background: rgba(255, 255, 255, .2); }
+.chip[aria-pressed="true"] { background: var(--sun); color: var(--ink); border-color: var(--sun); }
+.chip.evo { background: var(--pink); border-color: var(--pink); color: #fff; }
+.chip:disabled { opacity: .35; cursor: default; }
+.note { color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+
+@media (max-width: 900px) {
+  .app { grid-template-columns: minmax(0, 1fr); height: auto; }
+  .app > .panel { overflow: visible; }
+  .world { height: 62vh; min-height: 420px; }
+  .stage { width: min(78vw, 46vh); bottom: 7%; }
+  .panel { border-left: 0; border-top: 4px solid var(--cyan); padding: 20px 16px 28px; }
+  .orb { width: 100px; height: 100px; }
+  .stat { grid-template-columns: 24px 84px minmax(0, 1fr) 30px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01s !important; animation-iteration-count: 1 !important; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <section class="world" id="world" data-time="day" aria-label="Digitale Welt mit deinem Digimon">
+    <div class="sky"></div><div class="stars"></div><div class="orb"></div>
+    <div class="floor"></div>
+    <canvas class="rain" id="rain"></canvas>
+    <div class="speed"></div>
+    <div class="dark"></div>
+    <div class="topbar">
+      <div class="brand">DIGIMON-PARTNER<small>VORSCHAU</small></div>
+      <div class="clock" id="clock">--:--<small>TAG 4 · ROOKIE</small></div>
+    </div>
+    <div class="stage" id="stage">
+      <div class="pad"></div>
+      <div class="mon" id="mon"><img id="monimg" alt=""></div>
+    </div>
+    <div class="banner" id="banner"></div>
+    <div class="flash" id="flash"></div>
+  </section>
+
+  <aside class="panel">
+    <div class="slab">
+      <div class="who"><h1 id="name">AGUMON</h1><span class="stage-tag" id="stagetag">Rookie</span></div>
+      <p class="sub" id="sub">Noch 3 Tage bis zur nächsten Digitation – sie hängt davon ab, was du bis dahin trainierst.</p>
+      <div class="track" id="track"></div>
+    </div>
+
+    <div class="slab">
+      <span class="k">Zustand</span>
+      <div class="stats" id="stats"></div>
+    </div>
+
+    <div class="quick">
+      <button class="qb" data-act="drink"><b>💧</b>Wasser</button>
+      <button class="qb" data-act="eat"><b>🍖</b>Gegessen</button>
+      <button class="qb" data-act="fast" id="fastbtn"><b>⏱️</b>Fasten</button>
+      <button class="qb" data-act="train"><b>💪</b>Training</button>
+    </div>
+
+    <div class="slab fast" id="fastbox" hidden>
+      <svg viewBox="0 0 100 100" aria-hidden="true">
+        <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="10"/>
+        <circle id="fastring" cx="50" cy="50" r="42" fill="none" stroke="var(--lime)" stroke-width="10" stroke-dasharray="264" stroke-dashoffset="264"/>
+      </svg>
+      <div><span class="k">Fasten 16:8</span><div class="t" id="fasttime">0:00</div><div class="s">Dein Digimon fastet mit. Hunger zählt jetzt nicht als Pflegefehler.</div></div>
+    </div>
+
+    <div class="slab demo">
+      <span class="k">Vorschau · Digimon</span>
+      <div class="row" id="pick"></div>
+      <span class="k">Vorschau · Stimmung</span>
+      <div class="row" id="moods"></div>
+      <span class="k">Vorschau · Tageszeit</span>
+      <div class="row" id="times"></div>
+      <span class="k">Vorschau · Entwicklung</span>
+      <div class="row">
+        <button class="chip evo" id="evo">Digitation!</button>
+        <button class="chip" id="lazy">Faul gewesen …</button>
+        <button class="chip" id="reset">Zurück zum Baby</button>
+      </div>
+      <p class="note" style="margin-top:12px">Nur zum Anschauen: Diese Knöpfe gibt es später nicht – da entscheidet dein echtes Training, Essen und Fasten.
+        Artworks: Digi-API / © Bandai, nur privat.</p>
+    </div>
+  </aside>
+</div>
+
+<script>
+"use strict";
+const LINES = {
+  agumon:  { label: "Agumon",  forms: [["Botamon", "Baby"], ["Koromon", "In-Training"], ["Agumon", "Rookie"], ["Greymon", "Champion"], ["MetalGreymon", "Ultimate"]], start: 2 },
+  gabumon: { label: "Gabumon", forms: [["Tsunomon", "In-Training"], ["Gabumon", "Rookie"], ["Garurumon", "Champion"]], start: 1 },
+  guilmon: { label: "Guilmon", forms: [["Gigimon", "In-Training"], ["Guilmon", "Rookie"], ["Growlmon", "Champion"]], start: 1 },
+  renamon: { label: "Renamon", forms: [["Viximon", "In-Training"], ["Renamon", "Rookie"], ["Kyubimon", "Champion"]], start: 1 },
+  impmon:  { label: "Impmon",  forms: [["Yarmon", "In-Training"], ["Impmon", "Rookie"]], start: 1 },
+};
+const STATS = [
+  ["hunger", "🍖", "Hunger", "#ffb21e"], ["thirst", "💧", "Durst", "#2fd3ff"], ["power", "💪", "Kraft", "#ff4f8b"],
+  ["mind", "🧘", "Geist", "#b98cff"], ["disc", "⏱️", "Disziplin", "#a6ff3a"], ["mood", "😊", "Laune", "#ffe14d"],
+];
+const MOODS = [["idle", "Normal"], ["happy", "Freude"], ["hungry", "Hunger"], ["sleep", "Schlafen"], ["train", "Training"]];
+const TIMES = [["day", "Tag"], ["dusk", "Abend"], ["night", "Nacht"]];
+const state = { line: "agumon", form: 2, mood: "idle", time: "day", stats: { hunger: 6, thirst: 4, power: 5, mind: 3, disc: 7, mood: 8 }, fasting: false, busy: false };
+
+const $ = (id) => document.getElementById(id);
+const world = $("world"), stage = $("stage"), mon = $("mon"), img = $("monimg");
+const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
+const form = () => LINES[state.line].forms[state.form];
+
+// --- Anzeige ------------------------------------------------------------------------
+function render() {
+  const [name, lvl] = form();
+  img.src = `img/${name}.png`;
+  img.alt = name;
+  $("name").textContent = name.toUpperCase();
+  $("stagetag").textContent = lvl;
+  const forms = LINES[state.line].forms;
+  $("track").innerHTML = forms.map((_, i) => `<i class="${i <= state.form ? "on" : ""}"></i>`).join("");
+  $("evo").disabled = state.form >= forms.length - 1 || name === "Numemon";
+  $("clock").lastElementChild.textContent = `TAG ${state.form + 2} · ${lvl.toUpperCase()}`;
+  renderStats();
+}
+
+function renderStats() {
+  $("stats").innerHTML = STATS.map(([key, ic, nm, c]) => {
+    const v = state.stats[key];
+    return `<div class="stat ${v <= 2 ? "low" : ""}" style="--c:${c}"><span class="ic">${ic}</span><span class="nm">${nm}</span>
+      <span class="bar">${Array.from({ length: 10 }, (_, i) => `<i class="${i < v ? "on" : ""}"></i>`).join("")}</span><span class="val">${v * 10}</span></div>`;
+  }).join("");
+}
+
+function bump(key, n) {
+  state.stats[key] = Math.max(0, Math.min(10, state.stats[key] + n));
+  renderStats();
+}
+
+function setMood(m) {
+  state.mood = m;
+  mon.className = "mon" + (m === "idle" ? "" : " " + m);
+  world.classList.toggle("training", m === "train");
+  document.querySelectorAll("#moods .chip").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.m === m)));
+  clearInterval(state.zz);
+  if (m === "sleep") { setTime("night"); state.zz = setInterval(() => fx("Z", "zz", 62, 30), 900); }
+  if (m === "hungry") fx("🍖?", "", 50, 20);
+}
+
+function setTime(t) {
+  state.time = t;
+  world.dataset.time = t;
+  document.querySelectorAll("#times .chip").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.t === t)));
+}
+
+/** Kleiner schwebender Effekt über dem Digimon; x/y in Prozent der Bühne */
+function fx(text, cls = "", x = 50, y = 30) {
+  const el = document.createElement("span");
+  el.className = "fx " + cls;
+  el.textContent = text;
+  const r = stage.getBoundingClientRect(), w = world.getBoundingClientRect();
+  el.style.left = (r.left - w.left + r.width * x / 100) + "px";
+  el.style.top = (r.top - w.top + r.height * y / 100) + "px";
+  world.appendChild(el);
+  el.addEventListener("animationend", () => el.remove());
+}
+
+// --- Aktionen (später echte Einträge) ------------------------------------------------
+async function act(kind) {
+  if (state.busy) return;
+  if (kind === "fast") return toggleFast();
+  state.busy = true;
+  const before = state.mood;
+  if (before === "sleep") setTime("day");
+  if (kind === "eat") {
+    fx("🍖", "drop", 46, 40);
+    await wait(650);
+    setMood("eat");
+    for (let i = 0; i < 3; i++) setTimeout(() => fx("·", "", 40 + Math.random() * 20, 50), i * 300);
+    await wait(1700);
+    bump("hunger", 3); bump("mood", 1);
+    fx("+3 HUNGER", "stat", 50, 18);
+  } else if (kind === "drink") {
+    fx("💧", "drop", 50, 38);
+    await wait(600);
+    setMood("drink");
+    await wait(1600);
+    bump("thirst", 2);
+    fx("+2 DURST", "stat", 50, 18);
+  } else if (kind === "train") {
+    setMood("train");
+    world.classList.add("training");
+    for (let i = 0; i < 5; i++) { await wait(380); fx(["💥", "💪", "🔥"][i % 3], "", 30 + Math.random() * 40, 30 + Math.random() * 20); }
+    bump("power", 2); bump("hunger", -1); bump("thirst", -1);
+    fx("+2 KRAFT", "stat", 50, 14);
+  }
+  setMood("happy");
+  fx("♥", "big", 70, 22);
+  await wait(1700);
+  setMood(before === "sleep" ? "idle" : (before === "hungry" && state.stats.hunger > 3 ? "idle" : before === "train" ? "idle" : before));
+  state.busy = false;
+}
+
+let fastStart = 0, fastTimer;
+function toggleFast() {
+  state.fasting = !state.fasting;
+  $("fastbtn").classList.toggle("on", state.fasting);
+  $("fastbox").hidden = !state.fasting;
+  clearInterval(fastTimer);
+  if (state.fasting) {
+    fastStart = Date.now();
+    fx("Fasten läuft!", "stat", 50, 16);
+    // Vorschau im Zeitraffer: 1 Sekunde = 20 Minuten
+    fastTimer = setInterval(() => {
+      const min = Math.min(16 * 60, (Date.now() - fastStart) / 1000 * 20);
+      $("fasttime").textContent = `${Math.floor(min / 60)}:${String(Math.floor(min % 60)).padStart(2, "0")} / 16:00`;
+      $("fastring").style.strokeDashoffset = 264 - 264 * min / (16 * 60);
+      if (min >= 16 * 60) { clearInterval(fastTimer); bump("disc", 2); fx("FASTEN GESCHAFFT!", "stat", 50, 14); setMood("happy"); }
+    }, 200);
+  } else {
+    fx("Fasten beendet", "stat", 50, 16);
+  }
+}
+
+// --- Digitation -----------------------------------------------------------------------
+async function digivolve(toName, toLevel) {
+  if (state.busy) return;
+  state.busy = true;
+  const from = form()[0];
+  setMood("idle");
+  world.classList.add("rush");
+  showBanner(`${from.toUpperCase()} DIGITIERT ZU …`);
+  sound("evo");
+  mon.classList.add("glow");
+  await wait(500);
+  mon.classList.add("spin");
+  for (let i = 0; i < 4; i++) { ring(); await wait(320); }
+  $("flash").classList.remove("go"); void $("flash").offsetWidth; $("flash").classList.add("go");
+  await wait(120);
+  if (toName) {
+    LINES[state.line].forms.push([toName, toLevel]);
+    state.form = LINES[state.line].forms.length - 1;
+  } else {
+    state.form += 1;
+  }
+  render();
+  await wait(700);
+  mon.classList.remove("spin");
+  await wait(250);
+  mon.classList.remove("glow");
+  showBanner(form()[0].toUpperCase() + "!", true);
+  world.classList.remove("rush");
+  ring(); ring();
+  fx("✦", "big", 25, 30); fx("✦", "big", 75, 26);
+  await wait(1500);
+  setMood(toName === "Numemon" ? "hungry" : "happy");
+  state.busy = false;
+}
+
+function ring() {
+  const r = document.createElement("div");
+  r.className = "ring";
+  stage.appendChild(r);
+  r.addEventListener("animationend", () => r.remove());
+}
+
+function showBanner(text, big = false) {
+  const b = $("banner");
+  b.innerHTML = `<span class="${big ? "big" : ""}">${text}</span>`;
+  requestAnimationFrame(() => b.firstChild.classList.add("in"));
+}
+
+// Kleine Tonfolge per WebAudio (kein Sound-Download nötig)
+let audio;
+function sound(kind) {
+  try {
+    audio ??= new AudioContext();
+    const notes = kind === "evo" ? [523, 659, 784, 1047, 1319, 1568] : [392, 330, 262];
+    notes.forEach((f, i) => {
+      const o = audio.createOscillator(), g = audio.createGain();
+      o.type = "square"; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, audio.currentTime + i * .16);
+      g.gain.exponentialRampToValueAtTime(0.06, audio.currentTime + i * .16 + .02);
+      g.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + i * .16 + .15);
+      o.connect(g).connect(audio.destination);
+      o.start(audio.currentTime + i * .16); o.stop(audio.currentTime + i * .16 + .16);
+    });
+  } catch { /* kein Ton, auch gut */ }
+}
+
+// --- Datenregen im Hintergrund ----------------------------------------------------------
+function rain() {
+  const c = $("rain"), ctx = c.getContext("2d");
+  const glyphs = "01ΔΣΞΠ#<>=+*/".split("");
+  let cols = [];
+  const size = () => {
+    c.width = world.clientWidth; c.height = world.clientHeight;
+    cols = Array.from({ length: Math.ceil(c.width / 22) }, () => Math.random() * c.height);
+  };
+  size();
+  addEventListener("resize", size);
+  setInterval(() => {
+    ctx.fillStyle = "rgba(0,0,0,.12)";
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.fillRect(0, 0, c.width, c.height);
+    ctx.globalCompositeOperation = "source-over";
+    ctx.fillStyle = world.dataset.time === "day" ? "#ffffff" : "#2fd3ff";
+    ctx.font = "16px monospace";
+    const fast = world.classList.contains("rush");
+    cols.forEach((y, i) => {
+      if (!fast && i % 3) return;
+      ctx.fillText(glyphs[Math.random() * glyphs.length | 0], i * 22, y);
+      cols[i] = y > c.height + Math.random() * 400 ? -20 : y + (fast ? 26 : 14);
+    });
+  }, 60);
+}
+
+// --- Start ---------------------------------------------------------------------------
+$("pick").innerHTML = Object.entries(LINES).map(([k, l]) => `<button class="chip" data-l="${k}">${l.label}</button>`).join("");
+$("moods").innerHTML = MOODS.map(([m, l]) => `<button class="chip" data-m="${m}">${l}</button>`).join("");
+$("times").innerHTML = TIMES.map(([t, l]) => `<button class="chip" data-t="${t}">${l}</button>`).join("");
+const ORIGINAL = JSON.parse(JSON.stringify(LINES));
+
+$("pick").onclick = (e) => {
+  const b = e.target.closest("[data-l]");
+  if (!b || state.busy) return;
+  state.line = b.dataset.l;
+  LINES[state.line].forms = JSON.parse(JSON.stringify(ORIGINAL[state.line].forms));
+  state.form = LINES[state.line].start;
+  document.querySelectorAll("#pick .chip").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+  render(); setMood("idle");
+};
+$("moods").onclick = (e) => { const b = e.target.closest("[data-m]"); if (b && !state.busy) { if (b.dataset.m !== "sleep" && state.time === "night" && state.mood === "sleep") setTime("day"); setMood(b.dataset.m); } };
+$("times").onclick = (e) => { const b = e.target.closest("[data-t]"); if (b) setTime(b.dataset.t); };
+$("evo").onclick = () => digivolve();
+$("lazy").onclick = () => { if (form()[0] !== "Numemon") { bump("power", -4); bump("mood", -4); digivolve("Numemon", "Faul-Weg"); } };
+$("reset").onclick = () => {
+  if (state.busy) return;
+  LINES[state.line].forms = JSON.parse(JSON.stringify(ORIGINAL[state.line].forms));
+  state.form = 0; render(); setMood("idle");
+};
+document.querySelectorAll(".qb").forEach((b) => b.onclick = () => act(b.dataset.act));
+setInterval(() => { const d = new Date(); $("clock").firstChild.textContent = d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }); }, 1000);
+
+document.querySelector('#pick [data-l="agumon"]').setAttribute("aria-pressed", "true");
+render(); setMood("idle"); setTime("day"); rain();
+</script>
+</body>
+</html>

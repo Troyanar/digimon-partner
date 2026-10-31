@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0c0d0f">
+<title>Digimon-Partner</title>
+<link rel="icon" href="/static/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Russo+One&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+<script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
+               "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/" } }
+</script>
+</head>
+<body>
+<div class="app">
+  <section class="world" id="world" aria-label="Dein Digimon in der Digitalen Welt">
+    <div class="stage3d" id="stage3d"></div>
+    <div class="dim" id="dim"></div>
+    <div class="bubble" id="bubble" role="status" aria-live="polite" hidden><span id="bubble-text"></span></div>
+    <div class="banner" id="banner" aria-live="polite"></div>
+    <div class="flash" id="flash"></div>
+    <div class="fxlayer" id="fx"></div>
+    <div class="awards" id="awards" aria-live="polite"></div>
+    <p class="devclock num" id="devclock" hidden></p>
+    <p class="net" id="net" role="status" hidden></p>
+    <div class="visit" id="visit" hidden><span id="visit-text"></span><button class="btn btn--primary btn--small" id="visit-back">Zurück zu meinem Partner</button></div>
+    <p class="loading" id="loading">Lade dein Digimon …</p>
+  </section>
+
+  <main class="home">
+    <header class="shell">
+      <a class="mark" href="/" aria-label="Digimon-Partner">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3c5.5 0 9.5 6.5 9.5 14S21.5 29 16 29 6.5 24.5 6.5 17 10.5 3 16 3z"/><path d="M7.6 14.5l4-2.6 4.4 2.6 4.4-2.6 4 2.6v3.6l-4-2.6-4.4 2.6-4.4-2.6-4 2.6z" class="band"/></svg>
+        <span>Digimon-Partner</span>
+      </a>
+      <span class="scope" id="who">…</span>
+      <button class="sound" id="sound" aria-pressed="true">Ton an</button>
+      <span class="clock num" id="clock">--:--</span>
+    </header>
+
+    <nav class="tabs" id="tabs" aria-label="Bereiche">
+      <button data-tab="partner" aria-current="page">Partner</button>
+      <button data-tab="training">Training</button>
+      <button data-tab="freunde">Freunde<span class="tab-count num" id="friend-count"></span></button>
+      <button data-tab="erfolge">Erfolge<span class="tab-count num" id="tab-count"></span></button>
+      <button data-tab="tagebuch">Tagebuch</button>
+      <button data-tab="einstellungen">Mehr</button>
+    </nav>
+
+    <section class="view" id="tab-partner">
+      <div class="greeting">
+        <h1 id="greeting">…</h1>
+        <p class="sub" id="sub"></p>
+      </div>
+
+      <div class="actions" id="actions">
+        <button class="btn" data-act="water" id="act-water">Ein Glas Wasser</button>
+        <button class="btn" data-act="eat" id="act-eat">Gegessen</button>
+        <button class="btn" data-act="fast" id="act-fast">Fasten starten</button>
+        <button class="btn" data-act="train" id="act-train">Training</button>
+      </div>
+
+      <section class="team" aria-labelledby="team-h">
+        <h2 class="sr" id="team-h">Dein Team</h2>
+        <ul class="team-list" id="team"></ul>
+      </section>
+
+      <section class="card eggpick" id="eggpick" hidden aria-labelledby="egg-h">
+        <div class="fast-head"><h2 id="egg-h">Welches Digi-Ei?</h2>
+          <button class="btn btn--small" id="egg-close">Doch nicht</button></div>
+        <p class="caption" id="egg-note"></p>
+        <ul class="eggs" id="eggs"></ul>
+      </section>
+
+      <section class="card cook" id="jog-card" hidden aria-labelledby="jog-h">
+        <p class="label">Jogress</p>
+        <h2 class="cook-h" id="jog-h"></h2>
+        <p>Nehmt ihr an, verschmelzen beide Partner zu Paildramon.</p>
+        <div class="actions"><button class="btn btn--primary" id="jog-open">Ansehen</button></div>
+      </section>
+
+      <section class="card cook" id="cook" hidden aria-labelledby="cook-h">
+        <p class="label">Von deiner Rezepte-Seite</p>
+        <h2 class="cook-h" id="cook-h">Gekocht: <span id="cook-name"></span></h2>
+        <p id="cook-text"></p>
+        <div class="actions">
+          <button class="btn btn--primary" id="cook-go">Füttern</button>
+          <button class="btn" id="cook-no">Doch nicht</button>
+        </div>
+      </section>
+
+      <section class="card evo" aria-labelledby="evo-name">
+        <div class="evo-main">
+          <p class="label" id="evo-stage">Rookie · Stufe 4 von 7</p>
+          <h2 class="evo-name" id="evo-name">…</h2>
+          <div class="meter" aria-hidden="true"><i id="evo-bar"></i></div>
+          <p class="evo-left num" id="evo-left"></p>
+          <ol class="ladder" id="ladder" aria-label="Stufen"></ol>
+        </div>
+        <figure class="next" id="next">
+          <div class="screen"><img id="next-img" alt="" hidden><span class="q" id="next-q">?</span></div>
+          <figcaption><b>???</b><span id="next-cap">Nächste Form</span></figcaption>
+        </figure>
+      </section>
+
+      <div class="tiles">
+        <div class="tile tile--water">
+          <p class="label">Wasser heute</p>
+          <p class="value num"><span id="t-water">0</span><span class="unit" id="t-water-goal"> von 8 Gläsern</span></p>
+          <div class="glasses" id="glasses" aria-hidden="true"></div>
+        </div>
+        <div class="tile">
+          <p class="label">Wasser-Serie</p>
+          <p class="value num"><span id="t-streak">0</span><span class="unit" id="t-streak-unit"> Tage</span></p>
+          <p class="caption" id="t-streak-cap"></p>
+        </div>
+        <div class="tile">
+          <p class="label">Training diese Woche</p>
+          <p class="value num"><span id="t-train">0</span><span class="unit" id="t-train-goal"> von 5</span></p>
+          <p class="caption" id="t-train-cap"></p>
+        </div>
+        <div class="tile">
+          <p class="label">Pflegefehler</p>
+          <p class="value num" id="t-mistakes">0</p>
+          <p class="caption">Hunger oder Durst 2 Stunden leer</p>
+        </div>
+        <div class="tile tile--steps" id="steptile" hidden>
+          <div class="step-head">
+            <div>
+              <p class="label">Schritte heute</p>
+              <p class="value num"><span id="t-steps">0</span><span class="unit" id="t-steps-goal"> von 8.000</span></p>
+            </div>
+            <figure class="step-week" aria-labelledby="step-week-cap">
+              <div class="step-bars" id="step-bars" role="list"></div>
+              <figcaption class="sr" id="step-week-cap">Schritte der letzten 7 Tage</figcaption>
+            </figure>
+          </div>
+          <div class="meter" aria-hidden="true"><i id="step-bar"></i></div>
+          <p class="caption" id="t-steps-cap"></p>
+        </div>
+      </div>
+
+      <section class="card fastcard" id="fastcard" aria-labelledby="fast-h">
+        <div class="fast-head">
+          <h2 id="fast-h">Fasten</h2>
+          <span class="caption num" id="fast-rhythm">16:8</span>
+        </div>
+        <div id="fast-start" class="fast-start" hidden>
+          <p>Wann hast du zuletzt gegessen?</p>
+          <div class="row">
+            <button class="btn btn--small" data-ago="0">Gerade eben</button>
+            <button class="btn btn--small" data-ago="60">Vor 1 Std.</button>
+            <button class="btn btn--small" data-ago="120">Vor 2 Std.</button>
+            <button class="btn btn--small" data-ago="180">Vor 3 Std.</button>
+          </div>
+          <div class="row"><label class="inline">Oder um <input class="input input--time" id="fast-at" type="time"></label>
+            <button class="btn btn--primary btn--small" id="fast-at-go">Ab dann fasten</button>
+            <button class="btn btn--small" id="fast-start-close">Doch nicht</button></div>
+          <p class="caption">Höchstens 12 Stunden zurück.</p>
+        </div>
+        <div id="fast-run" hidden>
+          <p class="value num" id="fasttime">0:00</p>
+          <p id="fast-phase"></p>
+          <div class="meter fast-meter" aria-hidden="true"><i id="fastbar"></i><b class="tick" id="fast-tick12"></b></div>
+          <p class="ends num"><span>Start <span id="fast-from"></span></span><span id="fastgoal">Ziel</span></p>
+          <p class="caption">Leerer Magen zählt beim Fasten nicht als Pflegefehler. Wasser trinken ist erlaubt.</p>
+        </div>
+        <p id="fast-idle" class="fast-idle"></p>
+        <div class="fast-stats">
+          <div><p class="label">Fasten-Serie</p><p class="value num" id="f-streak">0</p></div>
+          <div><p class="label">Längstes</p><p class="value num" id="f-longest">0</p></div>
+          <div><p class="label">In 14 Tagen</p><p class="value num" id="f-count">0</p></div>
+        </div>
+        <p class="caption" id="fchart-empty" hidden>Noch kein Fasten in den letzten 14 Tagen. Sobald du eins beendest, erscheint hier dein Verlauf.</p>
+        <figure class="fchart" aria-labelledby="fchart-cap">
+          <figcaption id="fchart-cap" class="fchart-cap"><span>Die letzten 14 Tage, Stunden pro Tag</span>
+            <span class="legend"><i class="sw sw--done"></i>Ziel erreicht <i class="sw sw--short"></i>Vorher beendet</span></figcaption>
+          <div class="fchart-plot" id="fchart">
+            <span class="fchart-y">24 Std.</span>
+          </div>
+          <div class="fchart-days" id="fchart-days" aria-hidden="true"></div>
+          <div class="ftip" id="ftip" role="status" hidden></div>
+        </figure>
+      </section>
+
+      <section class="card" aria-labelledby="stats-h">
+        <h2 id="stats-h">Werte</h2>
+        <ul class="stats" id="stats"></ul>
+      </section>
+
+      <section class="card dev" id="dev" hidden aria-labelledby="dev-h" data-ui>
+        <h2 id="dev-h">Test-Modus</h2>
+        <div class="row">
+          <button class="btn btn--small" data-dev="skip" data-hours="1">+1 Std.</button>
+          <button class="btn btn--small" data-dev="skip" data-hours="6">+6 Std.</button>
+          <button class="btn btn--small" data-dev="skip" data-hours="24">+1 Tag</button>
+          <button class="btn btn--small" data-dev="skip" data-hours="168">+1 Woche</button>
+          <button class="btn btn--small" data-dev="train" data-art="kraft">Kraft 30 Min.</button>
+          <button class="btn btn--small" data-dev="train" data-art="geist">Yoga 30 Min.</button>
+          <button class="btn btn--small" data-dev="empty">Hunger und Durst leeren</button>
+        </div>
+        <div class="row"><label class="sr" for="devform">Form-ID</label><input class="input" id="devform" placeholder="Form-ID, z. B. f014"><button class="btn btn--small" data-dev="form">Form setzen</button></div>
+      </section>
+
+      <button class="btn btn--primary btn--wide" id="newegg" hidden>Neues Digi-Ei legen</button>
+    </section>
+
+    <section class="view" id="tab-training" hidden>
+      <div class="greeting">
+        <h1>Training</h1>
+        <p class="sub" id="train-sub"></p>
+      </div>
+      <div id="plans">
+        <section class="plan-group" aria-labelledby="pg-kraft">
+          <h2 id="pg-kraft">Kraft, ohne Geräte</h2>
+          <p class="caption">Zählt für den Kraft-Weg.</p>
+          <ul class="plans" id="plans-kraft"></ul>
+        </section>
+        <section class="plan-group" aria-labelledby="pg-geist">
+          <h2 id="pg-geist">Dehnen und Yoga</h2>
+          <p class="caption">Zählt für den Geist-Weg.</p>
+          <ul class="plans" id="plans-geist"></ul>
+        </section>
+      </div>
+      <section class="card session" id="session" hidden aria-live="polite">
+        <p class="label"><span id="train-title"></span> · <span id="ses-label"></span></p>
+        <h2 class="ses-name" id="ses-name"></h2>
+        <p class="ses-text" id="ses-text"></p>
+        <p class="ses-time num" id="ses-time">0</p>
+        <div class="meter" aria-hidden="true"><i id="ses-bar"></i></div>
+        <p class="caption" id="ses-next"></p>
+        <div class="actions">
+          <button class="btn btn--primary" id="ses-pause">Pause</button>
+          <button class="btn" id="ses-skip">Überspringen</button>
+          <button class="btn btn--danger" id="ses-cancel">Abbrechen</button>
+        </div>
+        <div class="meter meter--thin" aria-hidden="true"><i id="ses-all"></i></div>
+        <p class="caption num" id="ses-total"></p>
+      </section>
+      <section class="card result" id="train-result" hidden>
+        <p class="label">Training geschafft</p>
+        <p class="value" id="res-gain"></p>
+        <p id="res-text"></p>
+        <p class="caption" id="res-week"></p>
+        <button class="btn btn--primary" id="res-back">Zurück zu den Plänen</button>
+      </section>
+    </section>
+
+    <section class="view" id="tab-erfolge" hidden>
+      <div class="greeting">
+        <h1 id="ach-title">Erfolge</h1>
+        <p class="sub" id="ach-sub"></p>
+      </div>
+      <div class="tiles tiles--three">
+        <div class="tile"><p class="label">Serie jetzt</p><p class="value num" id="k-streak">0</p><p class="caption">Tage mit Wasserziel</p></div>
+        <div class="tile"><p class="label">Beste Serie</p><p class="value num" id="k-best">0</p><p class="caption">Tage am Stück</p></div>
+        <div class="tile"><p class="label">Gläser</p><p class="value num" id="k-glasses">0</p><p class="caption" id="k-more"></p></div>
+      </div>
+      <ul class="badges" id="badges"></ul>
+      <h2 class="sec-h">Ruhmeshalle</h2>
+      <div class="card" id="hall"></div>
+    </section>
+
+    <section class="view" id="tab-freunde" hidden>
+      <div class="greeting">
+        <h1>Freunde</h1>
+        <p class="sub" id="friends-sub"></p>
+      </div>
+      <p class="card caption" id="friends-hidden" hidden>Dein Partner ist für Freunde gerade unsichtbar (unter Mehr änderbar). Jogress mit Freunden geht dann nicht.</p>
+      <section class="card jog-box" id="jog-box" hidden aria-labelledby="jog-box-h">
+        <h2 id="jog-box-h">Jogress</h2>
+        <ul class="jog-list" id="jog-list"></ul>
+      </section>
+      <ul class="friends" id="friends"></ul>
+    </section>
+
+    <section class="view" id="tab-tagebuch" hidden>
+      <h1>Tagebuch</h1>
+      <ol class="diary card" id="diary"></ol>
+    </section>
+
+
+    <section class="view" id="tab-einstellungen" hidden>
+      <h1>Einstellungen</h1>
+      <form class="card form" id="settings" aria-labelledby="day-h">
+        <h2 id="day-h">Dein Tag</h2>
+        <div class="pair"><label>Schlafenszeit von <input class="input" name="sleep_start" inputmode="numeric" placeholder="23:00"></label>
+          <label>bis <input class="input" name="sleep_end" inputmode="numeric" placeholder="07:00"></label></div>
+        <label>Wasser pro Tag, in Gläsern zu 250 ml <input class="input" name="water_goal" type="number" min="1" max="20"></label>
+        <label>Fasten-Ziel in Stunden <input class="input" name="fast_goal" type="number" min="12" max="23"></label>
+        <label>Schritte pro Tag <input class="input" name="step_goal" type="number" min="1000" max="50000" step="500"></label>
+        <div class="pair"><label>Krafttraining pro Woche <input class="input" name="week_kraft" type="number" min="0" max="7"></label>
+          <label>Dehnen und Yoga pro Woche <input class="input" name="week_geist" type="number" min="0" max="7"></label></div>
+        <label class="check"><input type="checkbox" name="share"> Freunde dürfen meinen Partner sehen, anfeuern und für Jogress anfragen</label>
+        <button class="btn btn--primary" type="submit">Speichern</button>
+      </form>
+      <section class="card" id="invitebox" hidden aria-labelledby="inv-h">
+        <h2 id="inv-h">Freunde einladen</h2>
+        <p class="caption">Jeder Code funktioniert einmal. Gib ihn zusammen mit der Adresse dieser Seite weiter.</p>
+        <button class="btn" id="newinvite">Neuen Code erstellen</button>
+        <ul class="invites" id="invites"></ul>
+      </section>
+      <form class="card form" id="password" aria-labelledby="pw-h">
+        <h2 id="pw-h">Passwort ändern</h2>
+        <label>Bisheriges Passwort <input class="input" name="current" type="password" autocomplete="current-password"></label>
+        <label>Neues Passwort <input class="input" name="new" type="password" autocomplete="new-password" minlength="8" aria-describedby="pw-rule"></label>
+        <p class="caption" id="pw-rule">Mindestens 8 Zeichen.</p>
+        <button class="btn" type="submit">Ändern</button>
+      </form>
+      <section class="card" id="stepsbox" aria-labelledby="steps-h">
+        <h2 id="steps-h">Schritte vom iPhone</h2>
+        <p class="caption">Ein Kurzbefehl auf dem iPhone schickt deine Schritte hierher. Jede 1.000 Schritte geben deinem Partner Kraft,
+          und das Tagesziel zählt wie ein Training.</p>
+        <p class="step-status" id="steps-status"></p>
+        <div class="keybox" id="steps-keybox" hidden>
+          <p class="caption">Dein Schlüssel. Er wird nur jetzt gezeigt – gleich in den Kurzbefehl kopieren:</p>
+          <div class="row"><code class="key num" id="steps-key"></code><button class="btn btn--small" id="steps-copy">Kopieren</button></div>
+        </div>
+        <div class="row">
+          <button class="btn btn--primary" id="steps-new">Schlüssel erzeugen</button>
+          <button class="btn btn--danger" id="steps-drop" hidden>Trennen</button>
+        </div>
+        <details class="howto" id="steps-howto">
+          <summary>So richtest du den Kurzbefehl ein</summary>
+          <p class="caption">Am einfachsten öffnest du diese Seite direkt auf dem iPhone, dann kannst du Schlüssel und Adresse kopieren.</p>
+          <h3>1. Kurzbefehl bauen</h3>
+          <ol class="steps-list">
+            <li>App <b>Kurzbefehle</b> → <b>+</b> → Name <b>Digimon-Schritte</b>.</li>
+            <li>Aktion <b>„Health-Samples suchen“</b>: Typ <b>Schritte</b>, Filter <b>Startdatum ist heute</b>.</li>
+            <li>Aktion <b>„Statistiken berechnen“</b> (Suche: „Statistik“): <b>Summe</b> von <i>Health-Samples</i>.</li>
+            <li>Aktion <b>„Inhalte von URL abrufen“</b>, als Adresse:
+              <div class="row"><code class="key num" id="steps-url"></code><button class="btn btn--small" id="steps-url-copy">Kopieren</button></div>
+              Auf den Pfeil tippen: Methode <b>POST</b>, Anfragetext <b>JSON</b>, zwei Felder:
+              <ul class="fields">
+                <li><code>key</code> · Typ Text · dein Schlüssel</li>
+                <li><code>heute</code> · Typ Zahl · die Variable <i>Statistik</i></li>
+              </ul></li>
+            <li>Einmal auf <b>▶</b> tippen. Das iPhone fragt nach Health und nach dieser Seite: beides erlauben („Immer erlauben“).
+              Oben auf dieser Karte steht dann „Zuletzt gemeldet“.</li>
+          </ol>
+          <h3>2. Automatisch schicken</h3>
+          <ol class="steps-list">
+            <li>Kurzbefehle → <b>Automation</b> → <b>+</b> → <b>App</b>.</li>
+            <li>Ein paar Apps wählen, die du jeden Tag öffnest (z. B. WhatsApp, Safari), <b>„Wird geöffnet“</b>.</li>
+            <li><b>Sofort ausführen</b> wählen, <b>„Bei Ausführung benachrichtigen“</b> aus, dann <b>Digimon-Schritte</b>.</li>
+          </ol>
+          <p class="caption">Warum nicht nach Uhrzeit? Solange das iPhone gesperrt ist, kommt kein Kurzbefehl an die Health-Daten.
+            Beim Öffnen einer App ist es immer entsperrt. Die Seite merkt sich pro Tag den höchsten Stand, öfter schicken schadet nicht.</p>
+          <p class="caption">Mit Apple Watch: Ist die Zahl höher als in der Health-App, zählen iPhone und Uhr doppelt.
+            Dann bei „Health-Samples suchen“ noch den Filter <b>Quelle</b> auf ein Gerät setzen.</p>
+          <h3>Statt Kurzbefehl: Health Auto Export</h3>
+          <p class="caption">Die App „Health Auto Export“ (mit Premium) kann im Hintergrund schicken: Automation „REST API“,
+            Adresse wie oben, Header <code>Authorization</code> = <code>Bearer</code> + Leerzeichen + Schlüssel, Messwert <b>Schritte</b>,
+            Format JSON, zusammengefasst <b>pro Tag</b>.</p>
+        </details>
+      </section>
+      <section class="card" id="apkbox" hidden aria-labelledby="apk-h">
+        <h2 id="apk-h">Digimon-Gerät für Android</h2>
+        <p class="caption">Mach ein altes Android-Handy zu deinem Digimon-Gerät: Vollbild, Bildschirm bleibt an, das Digimon meldet sich von selbst und läuft auch ohne Netz.</p>
+        <ol class="steps-list">
+          <li>Die Datei auf dem Handy herunterladen und antippen.</li>
+          <li>Android fragt nach „Installation aus unbekannten Quellen“: für den Browser erlauben.</li>
+          <li>Die App öffnen und anmelden.</li>
+          <li>Unter Mehr → Gerät „Startbildschirm wählen“, dann startet sie nach dem Einschalten von selbst.</li>
+        </ol>
+        <a class="btn btn--primary" id="apk-link" href="/download/DigimonPartner.apk" download>App herunterladen</a>
+        <p class="caption num" id="apk-meta"></p>
+      </section>
+      <section class="card" id="devicebox" hidden aria-labelledby="dev-box-h">
+        <h2 id="dev-box-h">Gerät</h2>
+        <p class="caption">Dieses Handy ist dein Digimon-Gerät. Ist die App der Startbildschirm, startet sie nach dem Einschalten von selbst.</p>
+        <div class="row">
+          <button class="btn" id="dev-home">Startbildschirm wählen</button>
+          <button class="btn" id="dev-settings">Android-Einstellungen</button>
+        </div>
+      </section>
+      <section class="card">
+        <h2>Konto</h2>
+        <button class="btn btn--danger" id="logout">Abmelden</button>
+        <p class="caption">Modelle und Animationen: Digimon World Next Order, eigene Kopie, nur privat. © Bandai Namco.</p>
+      </section>
+    </section>
+  </main>
+</div>
+<div class="toast" id="toast" role="status"></div>
+<div class="night" id="night" hidden><div class="night-box" id="night-box"><p class="num" id="night-clock"></p><p id="night-text"></p></div></div>
+<script type="module" src="/static/app.js"></script>
+</body>
+</html>

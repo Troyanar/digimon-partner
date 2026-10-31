@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Digimon-Galerie</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Rubik:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --night: #070f2e; --deep: #0d2366; --blue: #1746c9; --cyan: #2fd3ff; --sun: #ffb21e; --pink: #ff4f8b;
+  --lime: #a6ff3a; --paper: #f2f7ff; --ink: #050a1f; --muted: #9fb3e6;
+  --kraft: #ff4f8b; --geist: #b98cff; --wild: #ff7a1a; --faul: #a6ff3a;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { background: var(--night); color: var(--paper); font: 500 15px/1.4 "Rubik", system-ui, sans-serif; overflow: hidden; }
+button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
+
+.app { display: grid; grid-template-columns: 380px minmax(0, 1fr); height: 100vh; }
+
+/* Linke Leiste: Eier und Entwicklungswege */
+.side { position: relative; overflow-y: auto; padding: 20px 18px 28px; background: linear-gradient(180deg, var(--deep), var(--night) 75%); border-right: 4px solid var(--cyan); }
+.side::before { content: ""; position: fixed; inset: 0 auto 0 0; width: 380px; pointer-events: none; opacity: .14;
+  background: repeating-linear-gradient(0deg, transparent 0 3px, rgba(47, 211, 255, .5) 3px 4px); }
+.brand { font: 400 24px/1 "Russo One", sans-serif; text-shadow: 3px 3px 0 var(--blue); }
+.brand small { display: block; margin-top: 7px; font: 800 11px "Rubik", sans-serif; letter-spacing: .22em; color: var(--ink); text-shadow: none;
+  background: var(--sun); padding: 3px 8px; width: max-content; clip-path: polygon(0 0, 100% 0, 92% 100%, 0 100%); }
+.k { display: block; margin: 20px 0 9px; font: 800 11px "Rubik", sans-serif; letter-spacing: .22em; text-transform: uppercase; color: var(--cyan); }
+.eggs { display: flex; flex-wrap: wrap; gap: 6px; }
+.egg { flex: 1 1 auto; padding: 8px 10px 7px; font-weight: 800; font-size: 12px; text-align: center; background: rgba(255, 255, 255, .07);
+  border: 2px solid rgba(255, 255, 255, .18); clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px)); }
+.egg[aria-pressed="true"] { background: var(--sun); color: var(--ink); border-color: var(--sun); }
+.path { margin-top: 14px; }
+.path h3 { display: flex; align-items: center; gap: 8px; font: 800 12px "Rubik", sans-serif; letter-spacing: .14em; text-transform: uppercase; color: var(--c, var(--paper)); }
+.path h3::after { content: ""; flex: 1; height: 2px; background: var(--c, rgba(255, 255, 255, .3)); opacity: .5; }
+.chain { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 2px; margin-top: 7px; }
+.chain .arr { color: var(--muted); font-weight: 800; padding: 0 2px; }
+.mon { display: flex; flex-direction: column; align-items: flex-start; padding: 6px 10px 5px; background: rgba(5, 10, 31, .6);
+  border: 2px solid rgba(47, 211, 255, .35); clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%); text-align: left; }
+.mon b { font-size: 14px; line-height: 1.15; }
+.mon small { font-size: 10.5px; color: var(--muted); font-weight: 700; letter-spacing: .04em; }
+.mon:hover { border-color: var(--cyan); }
+.mon[aria-pressed="true"] { background: var(--cyan); color: var(--ink); border-color: var(--cyan); }
+.mon[aria-pressed="true"] small { color: var(--ink); }
+.mon.jog { border-style: dashed; border-color: var(--sun); }
+.note { margin-top: 8px; font-size: 12px; color: var(--muted); line-height: 1.45; }
+
+/* Bühne */
+.stage { position: relative; overflow: hidden; }
+.stage canvas { display: block; }
+.title { position: absolute; left: 26px; top: 22px; pointer-events: none; }
+.title h1 { font: 400 clamp(34px, 4.4vw, 64px)/.95 "Russo One", sans-serif; color: #fff; text-shadow: 4px 4px 0 var(--blue), 0 0 30px rgba(5, 10, 31, .4); }
+.title .tags { display: flex; gap: 8px; margin-top: 10px; }
+.tag { padding: 5px 11px 4px; font: 800 12px "Rubik", sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--ink);
+  background: var(--lime); clip-path: polygon(8% 0, 100% 0, 92% 100%, 0 100%); }
+.tag.path { background: var(--c, var(--sun)); }
+.tag.id { background: rgba(255, 255, 255, .85); }
+.msg { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 14px 22px; background: rgba(5, 10, 31, .8);
+  border: 2px solid var(--sun); font-weight: 700; text-align: center; max-width: 80%; }
+.ctrl { position: absolute; right: 18px; bottom: 18px; left: 18px; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; pointer-events: none; }
+.box { pointer-events: auto; padding: 12px 14px; background: rgba(5, 10, 31, .78); border: 2px solid rgba(47, 211, 255, .5);
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px)); max-width: 100%; }
+.box .k { margin: 0 0 8px; }
+.row { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { padding: 6px 10px 5px; font-weight: 700; font-size: 13px; background: rgba(255, 255, 255, .08); border: 2px solid rgba(255, 255, 255, .22);
+  clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%); }
+.chip:hover { background: rgba(255, 255, 255, .18); }
+.chip[aria-pressed="true"] { background: var(--sun); color: var(--ink); border-color: var(--sun); }
+details summary { cursor: pointer; font-size: 12px; color: var(--muted); font-weight: 700; margin-top: 8px; }
+details .row { margin-top: 8px; max-height: 140px; overflow-y: auto; }
+
+@media (max-width: 900px) {
+  body { overflow: auto; }
+  .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: 60vh auto; height: auto; }
+  .stage { order: -1; height: 60vh; }
+  .side { border-right: 0; border-top: 4px solid var(--cyan); overflow: visible; }
+  .side::before { display: none; }
+  .ctrl { left: 8px; right: 8px; bottom: 8px; }
+  .title { left: 14px; top: 12px; }
+}
+</style>
+<script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
+               "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/" } }
+</script>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand">DIGIMON-GALERIE<small>ALLE LINIEN · NEXT ORDER</small></div>
+    <span class="k">Ei wählen</span>
+    <div class="eggs" id="eggs"></div>
+    <div id="paths"></div>
+    <p class="note">Modelle &amp; Animationen aus deiner Steam-Kopie von Digimon World Next Order – nur privat, nicht weitergeben.
+      Ziehen = drehen, Mausrad = zoomen.</p>
+  </aside>
+
+  <main class="stage" id="stage">
+    <div class="title"><h1 id="name">–</h1><div class="tags" id="tags"></div></div>
+    <div class="msg" id="msg">Lade …</div>
+    <div class="ctrl">
+      <div class="box">
+        <span class="k">Augen</span>
+        <div class="row" id="eyes">
+          <button class="chip" data-eye="0,0.5" aria-pressed="true">Offen</button><button class="chip" data-eye="0.5,0.5">Wütend</button>
+          <button class="chip" data-eye="0,0">Zu</button><button class="chip" data-eye="0.5,0">Fröhlich</button>
+        </div>
+      </div>
+      <div class="box">
+        <span class="k">Animation</span>
+        <div class="row" id="anims"></div>
+        <details><summary>Alle Animationen aus dem Spiel</summary><div class="row" id="allanims"></div></details>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+import * as THREE from "three";
+import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+// --- Die Linien (aus PLAN.md) -----------------------------------------------------------
+const S = { a: "Baby", b: "In-Training", c: "Rookie", d: "Champion", e: "Ultimate", f: "Mega", g: "Mega" };
+const m = (id, name, extra = {}) => ({ id, name, ...extra });
+const LINES = [
+  { egg: "Agumon", paths: [
+    ["Grundform", null, [m("a001", "Botamon"), m("b001", "Koromon"), m("c001", "Agumon")]],
+    ["Kraft", "kraft", [m("d001", "Greymon"), m("e001", "MetalGreymon"), m("f001", "WarGreymon")]],
+    ["Geist", "geist", [m("d053", "Greymon (Blue)"), m("e045", "MetalGreymon (Blue)"), m("f002", "ShineGreymon")]],
+    ["Wild", "wild", [m("e026", "SkullGreymon"), m("f049", "BlackWarGreymon")]] ] },
+  { egg: "Gabumon", paths: [
+    ["Grundform", null, [m("a002", "Punimon"), m("b002", "Tsunomon"), m("c002", "Gabumon")]],
+    ["Kraft", "kraft", [m("d002", "Garurumon"), m("e002", "WereGarurumon"), m("f003", "MetalGarurumon")]],
+    ["Geist", "geist", [m("d043", "Gururumon"), m("e029", "IceLeomon"), m("f075", "MagnaGarurumon")]],
+    ["Wild", "wild", [m("d054", "Garurumon (Black)"), m("e046", "WereGarurumon (Black)"), m("f050", "MetalGarurumon (Black)")]] ] },
+  { egg: "Veemon", paths: [
+    ["Grundform", null, [m("a005", "Pabumon"), m("b005", "Motimon"), m("c009", "Veemon")]],
+    ["Kraft", "kraft", [m("d009", "ExVeemon"), m("e009", "Paildramon", { jog: true }), m("f057", "Imperialdramon")]],
+    ["Geist", "geist", [m("d020", "Veedramon"), m("e017", "AeroVeedramon"), m("f020", "UlforceVeedramon")]] ],
+    note: "Paildramon nur per Jogress ExVeemon + Stingmon (Freund oder Ruhmeshalle). Ohne Partner nach 2 Wochen: ExVeemon → AeroVeedramon → UlforceVeedramon." },
+  { egg: "Wormmon", paths: [
+    ["Grundform", null, [m("a008", "Conomon"), m("b006", "Tanemon"), m("c011", "Wormmon"), m("d011", "Stingmon")]],
+    ["Jogress", "kraft", [m("e009", "Paildramon", { jog: true }), m("f057", "Imperialdramon")]],
+    ["Kraft (ohne Partner)", "kraft", [m("e037", "Okuwamon"), m("f040", "GranKuwagamon")]],
+    ["Geist (ohne Partner)", "geist", [m("e005", "MegaKabuterimon"), m("f007", "HerculesKabuterimon")]] ],
+    note: "Stingmon wartet bis zu 2 Wochen auf ein ExVeemon für die Jogress, danach nimmt es seinen eigenen Weg." },
+  { egg: "Gomamon", paths: [
+    ["Grundform", null, [m("a010", "Pichimon"), m("b012", "Bukamon"), m("c006", "Gomamon")]],
+    ["Kraft", "kraft", [m("d006", "Ikkakumon"), m("e006", "Zudomon"), m("f008", "Vikemon")]],
+    ["Geist", "geist", [m("d032", "Seadramon"), m("e036", "MegaSeadramon"), m("f011", "MarineAngemon")]],
+    ["Wild", "wild", [m("e053", "WaruSeadramon"), m("f039", "MetalSeadramon")]] ] },
+  { egg: "Guilmon", paths: [
+    ["Grundform", null, [m("a006", "Jyarimon"), m("b007", "Gigimon"), m("c012", "Guilmon")]],
+    ["Kraft", "kraft", [m("d010", "Growlmon"), m("e011", "WarGrowlmon"), m("f014", "Gallantmon"), m("g013", "Gallantmon CM", { form: true })]],
+    ["Geist (Drachen-Weg)", "geist", [m("d010", "Growlmon"), m("e028", "Megadramon"), m("f073", "Darkdramon")]],
+    ["Wild", "wild", [m("e049", "BlackWarGrowlmon"), m("f051", "ChaosGallantmon")]] ],
+    note: "Gallantmon CM ist ein Formwechsel: Gallantmon wird nach einer perfekten Woche (Wochenziel Training, jeden Tag Wasser, kein Pflegefehler) zum Crimson Mode. Megidramon gibt es in Next Order nicht – Megadramon und Darkdramon sind die nächsten Verwandten." },
+  { egg: "Renamon", paths: [
+    ["Grundform", null, [m("a004", "YukimiBotamon"), m("b011", "Nyaromon"), m("c015", "Renamon")]],
+    ["Kraft", "kraft", [m("d049", "Youkomon"), m("e052", "Doumon"), m("f052", "Kuzuhamon")]],
+    ["Geist", "geist", [m("d015", "Kyubimon"), m("e014", "Taomon"), m("f017", "Sakuyamon")]] ] },
+  { egg: "DemiDevimon", paths: [
+    ["Grundform", null, [m("a009", "Kuramon"), m("b010", "Tsumemon"), m("c027", "DemiDevimon")]],
+    ["Kraft", "kraft", [m("d019", "Devimon"), m("e018", "Myotismon"), m("f021", "VenomMyotismon")]],
+    ["Geist", "geist", [m("d018", "Wizardmon"), m("e019", "LadyDevimon"), m("f022", "Lilithmon")]],
+    ["Wild", "wild", [m("d056", "IceDevimon"), m("f030", "Beelzemon")]] ] },
+  { egg: "Faul", paths: [
+    ["Faul-Champion", "faul", [m("d059", "Numemon"), m("d061", "Sukamon")]],
+    ["Comeback", "geist", [m("e056", "Monzaemon")]],
+    ["Weiter faul", "wild", [m("e055", "Etemon"), m("f055", "PlatinumNumemon"), m("f062", "KingSukamon")]] ],
+    note: "Für alle Linien: zu wenig Training → Numemon, schlechte Pflege → Sukamon." },
+  { egg: "Bonus", paths: [
+    ["Jogress mit Freunden", "kraft", [m("g001", "Omegamon"), m("g004", "Imperialdramon FM"), m("g005", "Imperialdramon PM")]] ],
+    note: "Ideen für später: WarGreymon + MetalGarurumon → Omegamon, Imperialdramon-Formen." },
+];
+const PATH_COLOR = { kraft: "var(--kraft)", geist: "var(--geist)", wild: "var(--wild)", faul: "var(--faul)" };
+
+// Animationsnamen des Spiels -> Anzeige; Reihenfolge = Reihenfolge der Knöpfe
+const MAIN_ANIMS = [
+  [/_base_fa0/, "Stehen"], [/_eat_/, "Essen"], [/_rest_/, "Ausruhen"], [/_walk_fa0/, "Gehen"], [/_run_/, "Rennen"],
+  [/_feel_fa0/, "Gefühl A"], [/_feel_fd0/, "Gefühl D"], [/_feel_fh0/, "Gefühl H"], [/_jump_fa1/, "Springen"],
+  [/_atck_fa0/, "Angriff"], [/_spat_/, "Spezialangriff"],
+];
+
+// --- Szene -------------------------------------------------------------------------------
+const stageEl = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+stageEl.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+// Himmel der Digital World als Verlauf
+const sky = document.createElement("canvas"); sky.width = 4; sky.height = 256;
+const sg = sky.getContext("2d"), grad = sg.createLinearGradient(0, 0, 0, 256);
+grad.addColorStop(0, "#2a9fff"); grad.addColorStop(.62, "#b9ecff"); grad.addColorStop(.66, "#fff6c9"); grad.addColorStop(1, "#1b63e0");
+sg.fillStyle = grad; sg.fillRect(0, 0, 4, 256);
+const skyTex = new THREE.CanvasTexture(sky); skyTex.colorSpace = THREE.SRGBColorSpace;
+scene.background = skyTex;
+const camera = new THREE.PerspectiveCamera(32, 1, 0.01, 200);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+scene.add(new THREE.HemisphereLight("#ffffff", "#5577aa", 1.6));
+const sun = new THREE.DirectionalLight("#ffffff", 2.2); sun.position.set(2, 4, 3); scene.add(sun);
+const floor = new THREE.Group();
+const disc = new THREE.Mesh(new THREE.CircleGeometry(30, 64), new THREE.MeshBasicMaterial({ color: "#1b63e0" }));
+disc.rotation.x = -Math.PI / 2;
+const grid = new THREE.GridHelper(60, 60, "#ffffff", "#ffffff");
+grid.material.transparent = true; grid.material.opacity = .4; grid.position.y = .001;
+const pad = new THREE.Mesh(new THREE.RingGeometry(.55, .62, 64), new THREE.MeshBasicMaterial({ color: "#2fd3ff", transparent: true, opacity: .9 }));
+pad.rotation.x = -Math.PI / 2; pad.position.y = .003;
+floor.add(disc, grid, pad);
+scene.add(floor);
+
+function resize() {
+  const w = stageEl.clientWidth, h = stageEl.clientHeight;
+  renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix();
+}
+addEventListener("resize", resize); resize();
+
+// --- Modell laden --------------------------------------------------------------------------
+const fbxLoader = new FBXLoader(), texLoader = new THREE.TextureLoader();
+const cache = new Map();
+let current = null, mixer = null, actions = {}, playing = null, loadToken = 0;
+const eyeOffset = { value: new THREE.Vector2(0, 0.5) };
+
+const tex = (url, srgb = true) => new Promise((ok) => texLoader.load(url, (t) => { if (srgb) t.colorSpace = THREE.SRGBColorSpace; ok(t); }, undefined, () => ok(null)));
+const json = (url) => fetch(url).then((r) => r.ok ? r.json() : null).catch(() => null);
+
+/** Toon-Material wie im Spiel: Körperfarbe + Stufen-Ramp; Augen (2. UV) auf den Augen-Dreiecken überblendet. */
+function toonMaterial(map, ramp, eye) {
+  const mat = new THREE.MeshToonMaterial({ map, gradientMap: ramp || undefined });
+  if (!eye) return mat;
+  mat.onBeforeCompile = (sh) => {
+    sh.uniforms.eyeTex = { value: eye };
+    sh.uniforms.eyeOffset = eyeOffset;
+    sh.vertexShader = sh.vertexShader
+      .replace("#include <common>", "#include <common>\nattribute vec3 eyeUv;\nvarying vec3 vEyeUv;")
+      .replace("#include <uv_vertex>", "#include <uv_vertex>\nvEyeUv = eyeUv;");
+    sh.fragmentShader = sh.fragmentShader
+      .replace("#include <common>", "#include <common>\nuniform sampler2D eyeTex;\nuniform vec2 eyeOffset;\nvarying vec3 vEyeUv;")
+      .replace("#include <map_fragment>", `#include <map_fragment>
+        if (vEyeUv.z > 0.5) {
+          vec4 e = texture2D(eyeTex, clamp(vEyeUv.xy, 0.004, 0.996) * 0.5 + eyeOffset);
+          diffuseColor.rgb = mix(diffuseColor.rgb, e.rgb, e.a);
+        }`);
+  };
+  return mat;
+}
+
+/** Zweite UV (Augen) je Dreieck über die erste UV zuordnen (siehe werkzeuge/uv_export.py). */
+function addEyeUv(geo, uvs) {
+  const G = 1000, ck = (u, v) => `${Math.round(u * G)},${Math.round(v * G)}`;
+  const table = new Map();
+  for (let t = 0; t < uvs.eye.length; t++) {
+    const corners = [0, 1, 2].map((c) => { const o = (t * 3 + c) * 4; return { key: ck(uvs.tris[o], uvs.tris[o + 1]), uv1: [uvs.tris[o + 2], uvs.tris[o + 3]] }; });
+    const key = corners.map((c) => c.key).sort().join("|");
+    if (!table.has(key)) table.set(key, { corners, eye: uvs.eye[t] });
+  }
+  const uv = geo.attributes.uv; if (!uv) return 0;
+  const n = uv.count, idx = geo.index ? (i) => geo.index.getX(i) : (i) => i, tri = geo.index ? geo.index.count : n;
+  const run = (flip) => {
+    const out = new Float32Array(n * 3); let hits = 0;
+    for (let t = 0; t < tri; t += 3) {
+      const ids = [idx(t), idx(t + 1), idx(t + 2)];
+      const keys = ids.map((i) => ck(uv.getX(i), flip ? 1 - uv.getY(i) : uv.getY(i)));
+      const hit = table.get([...keys].sort().join("|"));
+      if (!hit) continue;
+      hits++;
+      ids.forEach((i, c) => { const k = hit.corners.find((x) => x.key === keys[c]) || hit.corners[c]; out.set([k.uv1[0], k.uv1[1], hit.eye], i * 3); });
+    }
+    return { out, hits };
+  };
+  const a = run(false), b = run(true), best = a.hits >= b.hits ? a : b;
+  geo.setAttribute("eyeUv", new THREE.BufferAttribute(best.out, 3));
+  return best.hits;
+}
+
+const hidden = new THREE.MeshBasicMaterial({ visible: false });
+async function loadModel(id) {
+  if (cache.has(id)) return cache.get(id);
+  const dir = `../_spieldaten/export/${id}/FBX_Animator/${id}/`;
+  const fbx = await fbxLoader.loadAsync(dir + `${id}.fbx`).catch(() => null);
+  if (!fbx) return null;
+  const [anims, uvs, ramp, eye] = await Promise.all([
+    json(`../_spieldaten/export/${id}/anim.json`), json(`../_spieldaten/export/${id}/uv.json`),
+    tex(dir + `${id}_r00.png`, false), tex(dir + `${id}_e00.png`),
+  ]);
+  if (ramp) { ramp.minFilter = ramp.magFilter = THREE.NearestFilter; ramp.generateMipmaps = false; }
+  if (eye) { eye.generateMipmaps = false; eye.minFilter = THREE.LinearFilter; }
+  fbx.traverse((o) => {
+    if (!o.isMesh) return;
+    o.frustumCulled = false;
+    const hasEye = eye && uvs && uvs.eye.length && addEyeUv(o.geometry, uvs) > 0;
+    // Körper-Materialien heißen <id>_c00/_c01 …; alles andere sind Effekte (Energie-Auren, Lichter),
+    // die im Spiel nur bei Angriffen aufleuchten – im Ruhezustand ausgeblendet
+    const conv = (mt) => /_c\d\d$/.test(mt.name || "") || !mt.map
+      ? toonMaterial(mt.map || null, ramp, hasEye ? eye : null)
+      : hidden;
+    o.material = Array.isArray(o.material) ? o.material.map(conv) : conv(o.material);
+    // nur aus Effekten bestehende Teile ganz ausblenden (zählen dann auch nicht zur Größe)
+    if ([].concat(o.material).every((mt) => mt === hidden)) o.visible = false;
+  });
+  const entry = { fbx, anims: anims?.clips || [] };
+  cache.set(id, entry);
+  return entry;
+}
+
+function buildActions(entry) {
+  const root = entry.fbx, bones = {};
+  root.traverse((o) => { if (o.isBone || o.type === "Object3D") bones[o.name] = o; });
+  // Maßstab Spiel-Positionen -> FBX (Median aus allen Positions-Spuren)
+  const ratios = [];
+  for (const c of entry.anims) for (const t of c.tracks) {
+    const b = bones[t.bone]; if (t.type !== "position" || !b) continue;
+    const l = Math.hypot(t.values[0], t.values[1], t.values[2]);
+    if (l > 1e-4 && b.position.length() > 1e-4) ratios.push(b.position.length() / l);
+  }
+  ratios.sort((a, b) => a - b);
+  const scale = ratios.length ? ratios[ratios.length >> 1] : 1;
+  const mx = new THREE.AnimationMixer(root), acts = {};
+  for (const c of entry.anims) {
+    const n = Math.round(c.duration * c.fps) + 1, times = Array.from({ length: n }, (_, i) => i / c.fps), tracks = [];
+    for (const t of c.tracks) {
+      if (!bones[t.bone]) continue;
+      const name = THREE.PropertyBinding.sanitizeNodeName(t.bone);
+      if (t.type === "quaternion") tracks.push(new THREE.QuaternionKeyframeTrack(`${name}.quaternion`, times, t.values));
+      else if (t.type === "position") tracks.push(new THREE.VectorKeyframeTrack(`${name}.position`, times, t.values.map((v) => v * scale)));
+      else tracks.push(new THREE.VectorKeyframeTrack(`${name}.scale`, times, t.values));
+    }
+    if (tracks.length) acts[c.name] = mx.clipAction(new THREE.AnimationClip(c.name, c.duration, tracks));
+  }
+  return { mx, acts };
+}
+
+function play(name) {
+  const next = actions[name]; if (!next) return;
+  next.reset().setLoop(THREE.LoopRepeat).play();
+  if (playing && playing !== next) playing.crossFadeTo(next, .25, false);
+  playing = next;
+  document.querySelectorAll("[data-a]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.a === name)));
+}
+
+const msg = document.getElementById("msg");
+async function show(mon, pathLabel, color) {
+  const token = ++loadToken;
+  document.getElementById("name").textContent = mon.name.toUpperCase();
+  document.getElementById("tags").innerHTML = `<span class="tag">${S[mon.id[0]]}</span>` +
+    (pathLabel ? `<span class="tag path" style="--c:${color}">${pathLabel}</span>` : "") +
+    (mon.jog ? `<span class="tag path" style="--c:var(--sun)">Jogress</span>` : "") +
+    (mon.form ? `<span class="tag path" style="--c:var(--sun)">Formwechsel</span>` : "") + `<span class="tag id">${mon.id}</span>`;
+  document.querySelectorAll(".mon").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.id === mon.id && b.dataset.p === pathLabel)));
+  msg.hidden = false; msg.textContent = `Lade ${mon.name} …`;
+  const entry = await loadModel(mon.id);
+  if (token !== loadToken) return;
+  if (current) { scene.remove(current); mixer?.stopAllAction(); }
+  if (!entry) { msg.textContent = `${mon.name} (${mon.id}) ist noch nicht exportiert – assetstudio_alle.ps1 starten.`; current = null; return; }
+  msg.hidden = true;
+  current = entry.fbx; current.position.set(0, 0, 0); current.rotation.set(0, 0, 0);
+  ({ mx: mixer, acts: actions } = buildActions(entry));
+  scene.add(current);
+  // Ruhepose bestimmen, dann Kamera und Boden passend zur Größe
+  const base = Object.keys(actions).find((k) => /_base_fa0/.test(k)) || Object.keys(actions)[0];
+  if (base) { actions[base].play(); mixer.update(0.01); }
+  // Größe aus der echten (animierten) Haltung – Flieger wie Megadramon schweben sonst über dem Bild
+  current.updateMatrixWorld(true);
+  const box = new THREE.Box3();
+  current.traverse((o) => { if (o.isMesh && o.visible) box.expandByObject(o, true); });
+  const size = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3());
+  current.position.y -= box.min.y;
+  const h = Math.max(size.y, size.x * .7, size.z * .7);
+  floor.scale.setScalar(h / 1.3); pad.scale.setScalar(Math.max(size.x, size.z) / h * 1.3);
+  pad.position.set(c.x / (h / 1.3), .003, c.z / (h / 1.3));
+  // etwas weiter weg und Blickpunkt tiefer, damit Füße über den Knöpfen unten bleiben
+  controls.target.set(c.x, size.y * .38, c.z);
+  camera.position.set(c.x + h * 1.2, size.y * .55 + h * .25, c.z + h * 3.1);
+  camera.near = h / 100; camera.far = h * 80; camera.updateProjectionMatrix();
+  // Knöpfe für die Animationen dieses Digimons
+  const names = Object.keys(actions);
+  const mains = MAIN_ANIMS.map(([re, label]) => [names.find((n) => re.test(n)), label]).filter(([n]) => n);
+  document.getElementById("anims").innerHTML = mains.map(([n, l]) => `<button class="chip" data-a="${n}">${l}</button>`).join("");
+  document.getElementById("allanims").innerHTML = names.sort().map((n) => `<button class="chip" data-a="${n}">${n.replace(/^a\d_/, "")}</button>`).join("");
+  playing = null;
+  if (base) play(base);
+  window.__ready = mon.id;
+}
+
+// --- Leiste aufbauen -----------------------------------------------------------------------
+let lineIdx = 0;
+function renderLine() {
+  document.querySelectorAll(".egg").forEach((b, i) => b.setAttribute("aria-pressed", String(i === lineIdx)));
+  const line = LINES[lineIdx];
+  document.getElementById("paths").innerHTML = line.paths.map(([label, kind, mons]) => `
+    <div class="path" style="--c:${PATH_COLOR[kind] || "var(--paper)"}">
+      <h3>${kind === "kraft" ? "💪 " : kind === "geist" ? "🧘 " : kind === "wild" ? "😈 " : kind === "faul" ? "💤 " : ""}${label}</h3>
+      <div class="chain">${mons.map((x, i) => `${i ? `<span class="arr">${x.form ? "⇄" : "→"}</span>` : ""}<button class="mon${x.jog || x.form ? " jog" : ""}" data-id="${x.id}" data-p="${label}">
+        <b>${x.name}</b><small>${S[x.id[0]]}${x.jog ? " · Jogress" : ""}${x.form ? " · Formwechsel" : ""}</small></button>`).join("")}</div>
+    </div>`).join("") + (line.note ? `<p class="note">${line.note}</p>` : "");
+}
+document.getElementById("eggs").innerHTML = LINES.map((l, i) => `<button class="egg" data-i="${i}">${l.egg}</button>`).join("");
+document.getElementById("eggs").onclick = (e) => {
+  const b = e.target.closest("[data-i]"); if (!b) return;
+  lineIdx = Number(b.dataset.i); renderLine();
+  const [label, kind, mons] = LINES[lineIdx].paths[0];
+  show(mons[mons.length - 1], kind ? label : null, PATH_COLOR[kind]);
+};
+document.getElementById("paths").onclick = (e) => {
+  const b = e.target.closest(".mon"); if (!b) return;
+  const path = LINES[lineIdx].paths.find(([l]) => l === b.dataset.p);
+  show(path[2].find((x) => x.id === b.dataset.id), path[1] ? path[0] : null, PATH_COLOR[path[1]]);
+};
+document.addEventListener("click", (e) => { const b = e.target.closest("[data-a]"); if (b) play(b.dataset.a); });
+document.getElementById("eyes").onclick = (e) => {
+  const b = e.target.closest("[data-eye]"); if (!b) return;
+  const [x, y] = b.dataset.eye.split(",").map(Number); eyeOffset.value.set(x, y);
+  document.querySelectorAll("[data-eye]").forEach((c) => c.setAttribute("aria-pressed", String(c === b)));
+};
+window.__show = (id) => { for (const [i, l] of LINES.entries()) for (const [label, kind, mons] of l.paths) { const x = mons.find((y) => y.id === id); if (x) { lineIdx = i; renderLine(); return show(x, kind ? label : null, PATH_COLOR[kind]); } } };
+
+renderLine();
+show(LINES[0].paths[0][2][2], null);
+
+const clock = new THREE.Clock();
+renderer.setAnimationLoop(() => { const dt = clock.getDelta(); mixer?.update(dt); controls.update(); renderer.render(scene, camera); });
+</script>
+</body>
+</html>

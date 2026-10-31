@@ -1,0 +1,29 @@
+plugins {
+    id 'com.android.application'
+}
+
+// Adresse der Partner-Seite. Zum Testen im WLAN z. B.: bauen.ps1 -Url http://192.168.x.x:8420
+def partnerUrl = (project.findProperty('partnerUrl') ?: 'http://localhost:8420').toString().replaceAll('/+$', '')
+
+android {
+    namespace 'de.knuschti.partner'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'de.knuschti.partner.geraet'
+        minSdk 24
+        targetSdk 35
+        versionCode 1
+        versionName '1.0'
+        buildConfigField 'String', 'PARTNER_URL', "\"${partnerUrl}\""
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

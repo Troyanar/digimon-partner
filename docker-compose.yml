@@ -1,0 +1,25 @@
+services:
+  partner:
+    build: .
+    container_name: partner
+    restart: unless-stopped
+    # keine .env vom PC: dort steht DEV=1 (Test-Modus) – auf dem Server ist er immer aus
+    environment:
+      HOST: 0.0.0.0
+      PORT: "8420"
+      DATA_DIR: /data                  # partner.db, assets/ (3D-Daten), app/ (Geräte-APK)
+      DEV: "0"
+      TZ_NAME: Europe/Berlin
+      TRUSTED_PROXIES: 172.18.0.0/16   # Docker-Netz des Nginx Proxy Managers (npm_default)
+    volumes:
+      - ./data:/data                   # beim Sichern diesen Ordner mitnehmen
+    ports:
+      - "127.0.0.1:8420:8420"          # nur für Tests auf dem Server; von außen geht's über den Proxy Manager
+    networks:
+      - default
+      - npm                            # damit der Proxy Manager den Container als "partner:8420" erreicht
+
+networks:
+  npm:
+    external: true
+    name: npm_default

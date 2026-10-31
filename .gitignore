@@ -1,0 +1,25 @@
+.venv/
+.venv-werkzeuge/
+__pycache__/
+.env
+data/
+_spieldaten/
+_extern/
+_test/
+geraet-app/.gradle/
+geraet-app/build/
+geraet-app/app/build/
+geraet-app/local.properties
+geraet-app/*.apk
+.taste-skill/
+backups/
+*.db
+*.db-*
+*.log
+*.apk
+# server-specific deploy scripts (contain the server address)
+deploy_vps.ps1
+vps_update.sh
+
+# Local build/server settings
+geraet-app/url.txt

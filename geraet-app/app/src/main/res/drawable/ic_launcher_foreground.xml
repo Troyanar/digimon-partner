@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Digi-Ei aus dem Seiten-Logo (static/favicon), mittig in der 108er-Fläche des adaptiven Icons -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <group android:translateX="30" android:translateY="28" android:scaleX="1.5" android:scaleY="1.5">
+        <path android:fillColor="#FF0C0D0F"
+            android:pathData="M16,3c5.5,0 9.5,6.5 9.5,14S21.5,29 16,29 6.5,24.5 6.5,17 10.5,3 16,3z" />
+        <path android:fillColor="#FF3FB0F2"
+            android:pathData="M7.6,14.5l4,-2.6 4.4,2.6 4.4,-2.6 4,2.6v3.6l-4,-2.6 -4.4,2.6 -4.4,-2.6 -4,2.6z" />
+    </group>
+</vector>

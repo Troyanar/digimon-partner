@@ -1,0 +1,17 @@
+data
+backups
+.env
+.venv
+.venv-werkzeuge
+__pycache__
+_test
+_spieldaten
+_extern
+.taste-skill
+geraet-app
+vorschau
+werkzeuge
+tests
+*.bat
+*.ps1
+*.sh
