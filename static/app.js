@@ -1,12 +1,13 @@
 // Digimon-Partner – Digivice: die Begrüßung beantwortet "Was braucht mein Digimon gerade?", darunter die passende Aktion,
 // Stufen-Leiste mit Schatten der nächsten Form, Tageswerte, Serien und Erfolge. Das Digimon spricht in einer Sprechblase,
 // jede Eintragung hat eine kleine Belohnung (Balken laufen, Zahlen zählen hoch, Ton, Jubel).
-import { Viewer, silhouette, snapshot } from "/static/viewer.js";
+import { Viewer, silhouette, snapshot } from "/static/viewer.js?v=texture-ready-1";
 import { sfx, soundOn, setSound, allowSound } from "/static/sound.js";
 import { isDevice, setupDevice } from "/static/device.js";
 import { setupOffline, cachedMe, saveMe } from "/static/offline.js";
 import { setupTraining } from "/static/train.js";
 import { setupFriends } from "/static/friends.js";
+import { setupPush } from "/static/push.js";
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -181,7 +182,7 @@ function need(state) {
     if (h >= goal) return { title: "Fastenziel geschafft!", sub: `${n} ist stolz auf dich. Du kannst jetzt essen – oder noch weiter fasten.`, act: "eat" };
     return { title: `${n} fastet mit dir.`, sub: `${Math.floor(h)} von ${goal} Stunden geschafft. Wasser trinken ist erlaubt.`, act: "water" };
   }
-  if (s.thirst < 35) return { title: `${n} hat Durst.`, sub: `${p.water_today} von ${p.water_goal} Gläsern heute.`, act: "water" };
+  if (s.thirst < 35) return { title: `${n} hat Durst.`, sub: `${Math.round(p.water_today * 250)} von ${p.water_goal * 250} ml heute.`, act: "water" };
   if (s.hunger < 35) return { title: `${n} hat Hunger.`, sub: "Trag ein, wenn du gegessen hast.", act: "eat" };
   if (p.waiting && p.jogress_partner)
     return { title: `${n} wartet auf ein ${p.jogress_partner}.`, sub: "Für die Jogress zu Paildramon. Schau bei Freunde, wer gerade eins hat.", act: null };
@@ -194,7 +195,7 @@ function need(state) {
   }
   if (s.mood < 35) return { title: `${n} ist schlecht gelaunt.`, sub: "Etwas Wasser und Essen helfen.", act: "water" };
   if (p.water_today < p.water_goal)
-    return { title: `${n} geht es gut.`, sub: `Noch ${p.water_goal - p.water_today} Gläser bis zum Wasserziel, dann wächst deine Serie.`, act: "water" };
+    return { title: `${n} geht es gut.`, sub: `Noch ${Math.max(0, Math.round((p.water_goal - p.water_today) * 250))} ml bis zum Wasserziel, dann wächst deine Serie.`, act: "water" };
   return { title: `${n} geht es super.`, sub: "Wasserziel für heute geschafft.", act: null };
 }
 
@@ -224,18 +225,19 @@ function renderWater(p) {
     if (on && !cell.classList.contains("on") && ui.state?.pet) { cell.classList.remove("pop"); void cell.offsetWidth; cell.classList.add("pop"); }
     cell.classList.toggle("on", on);
   });
-  countTo($("t-water"), p.water_today);
-  $("t-water-goal").textContent = ` von ${goal} ${goal === 1 ? "Glas" : "Gläsern"}`;
+  countTo($("t-water"), Math.round(p.water_today * 250));
+  $("t-water-goal").textContent = ` von ${goal * 250} ml`;
   document.querySelector(".tile--water").classList.toggle("goal", p.water_today >= goal);
 }
 
 function renderTiles(state) {
   const p = state.pet, s = state.settings, pr = state.progress;
   renderWater(p);
+  countTo($("t-calories"), p.calories_today || 0);
   countTo($("t-streak"), pr.streak);
   $("t-streak-unit").textContent = pr.streak === 1 ? " Tag" : " Tage";
   $("t-streak-cap").textContent = pr.today_ok ? `Heute geschafft. Beste Serie: ${pr.best_streak}`
-    : pr.streak ? `Heute noch ${p.water_goal - p.water_today} Gläser, sonst reißt sie.` : "Schaff heute dein Wasserziel, dann startet sie.";
+    : pr.streak ? `Heute noch ${Math.max(0, Math.round((p.water_goal - p.water_today) * 250))} ml, sonst reißt sie.` : "Schaff heute dein Wasserziel, dann startet sie.";
   const goal = s.week_kraft + s.week_geist;
   countTo($("t-train"), p.week.kraft + p.week.geist);
   $("t-train-goal").textContent = ` von ${goal}`;
@@ -480,22 +482,27 @@ async function renderHall() {
 }
 
 // --- Aktionen ---------------------------------------------------------------------------------------
-async function act(kind) {
+async function act(kind, data = {}) {
   if (ui.busy) return;
   const p = ui.state.pet;
+  if ((kind === "water" && !data.ml) || (kind === "eat" && !data.calories)) {
+    showTab("ernaehrung");
+    $(kind === "water" ? "water-ml" : "meal-kcal").focus();
+    return;
+  }
   try {
     if (kind === "water") {
       const before = p.water_today;
-      const res = await record("water", { glasses: 1 });
+      const res = await record("water", { ml: 250, ...data });
       const reached = before < res.pet.water_goal && res.pet.water_today >= res.pet.water_goal;
-      sfx.water(); fx("+1 Glas");
+      sfx.water(); fx(`+${data.ml || 250} ml`);
       await render(res);
       if (reached) {
         ui.viewer.play("cheer"); sfx.goal(); burst(); banner("Wasserziel geschafft!", true);
         say(pick(LINES.goal));
       } else { ui.viewer.play("happy"); say(pick(LINES.water), 2600); }
     } else if (kind === "eat") {
-      const res = await record("eat");
+      const res = await record("eat", data);
       sfx.eat(); ui.viewer.play("eat"); fx("Lecker!");
       await render(res);
       say(pick(LINES.eat), 2600);
@@ -656,6 +663,9 @@ async function renderInvites() {
 }
 
 function showTab(name) {
+  document.body.dataset.view = name;
+  if (["ernaehrung", "einstellungen"].includes(name) && matchMedia("(max-width: 900px)").matches) { window.scrollTo(0, 0); document.querySelector(".home").scrollTop = 0; }
+  if (name === "einstellungen") loadNutritionSettings().catch(err => toast(err.message, true));
   document.querySelectorAll("#tabs button").forEach((x) => (x.dataset.tab === name ? x.setAttribute("aria-current", "page") : x.removeAttribute("aria-current")));
   document.querySelectorAll(".view").forEach((t) => { t.hidden = t.id !== `tab-${name}`; });
   if (name === "training") trainer.load().catch((err) => toast(err.message, true));
@@ -792,6 +802,7 @@ const friends = setupFriends({
 
 // --- Offline: Warteschlange und Sync (siehe offline.js) -------------------------------------------------
 let off = null;
+let pushCtl = null;   // Benachrichtigungen (push.js)
 const gameNow = () => Date.now() / 1000 + ui.clockOffset;
 
 /** Eintragung: mit Netz sofort, sonst in die Warteschlange – der Server holt sie beim Sync zur richtigen Uhrzeit nach. */
@@ -880,6 +891,9 @@ async function main() {
   buildStats();
   if (isDevice()) startDevice();
   $("devicebox").hidden = !window.Geraet;
+  // die Geräte-App (Android-WebView) kann kein Web-Push – dort meldet sich das Digimon selbst (device.js)
+  $("pushbox").hidden = !!window.Geraet;
+  if (!window.Geraet) pushCtl = setupPush({ $, api, toast });
   $("stepsbox").hidden = !!window.Geraet;   // eingerichtet wird auf dem iPhone, nicht auf dem Digimon-Gerät
   // Download der Geräte-App – nicht in der App selbst, und nur wenn sie gebaut ist
   $("apkbox").hidden = !!window.Geraet || !ui.me.apk;
@@ -971,6 +985,7 @@ $("newinvite").addEventListener("click", async () => {
 });
 $("logout").addEventListener("click", async () => {
   if (off?.pending() && !confirm("Es warten noch Eintragungen auf den Sync. Trotzdem abmelden? Sie werden beim nächsten Anmelden geschickt.")) return;
+  await pushCtl?.forget();
   await api("/logout", "POST", {}).catch(() => {});
   try { localStorage.removeItem("partner.me"); localStorage.removeItem(`partner.state.${ui.me.user.name}`); } catch { /* egal */ }
   location.href = "/login";
@@ -987,3 +1002,102 @@ $("dev").addEventListener("click", async (e) => {
 });
 
 main().catch((err) => { $("loading").textContent = err.message; });
+
+// Mengen werden erst nach erfolgreichem Speichern zurückgesetzt.
+$("water-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!e.currentTarget.reportValidity()) return;
+  await act("water", { ml: Number($("water-ml").value) });
+});
+$("calorie-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!e.currentTarget.reportValidity() || ui.busy) return;
+  const form = e.currentTarget, button = form.querySelector("button");
+  button.disabled = true;
+  try {
+    const res = await record("eat", { calories: Number($("meal-kcal").value), meal: $("meal-name").value });
+    await render(res); form.reset(); sfx.eat(); ui.viewer.play("eat"); toast("Mahlzeit eingetragen.");
+  } catch (err) { toast(err.message, true); }
+  finally { button.disabled = false; }
+});
+
+let mealPreviewUrl;
+$("meal-photo").addEventListener("change", () => {
+  if (mealPreviewUrl) URL.revokeObjectURL(mealPreviewUrl);
+  const file = $("meal-photo").files[0];
+  $("photo-file-name").textContent = file ? file.name : "JPEG, PNG oder WebP · bis 4 MB";
+  $("meal-preview").hidden = !file;
+  if (file) { mealPreviewUrl = URL.createObjectURL(file); $("meal-preview").src = mealPreviewUrl; }
+});
+async function loadNutritionProviders() {
+  try {
+    const res = await api("/nutrition/providers");
+    $("photo-provider").innerHTML = res.providers.length
+      ? res.providers.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join("")
+      : '<option value="">Noch kein Anbieter eingerichtet</option>';
+    $("photo-analyze").disabled = !res.providers.length;
+    if (!res.providers.length) $("photo-status").textContent = "Fotoanalyse benötigt einen auf dem Server eingerichteten Anbieter mit API-Schlüssel und Bildmodell.";
+  } catch { $("photo-status").textContent = "Fotoanalyse benötigt eine Internetverbindung. Manuell eintragen geht auch offline."; }
+}
+$("photo-form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const file = $("meal-photo").files[0], button = $("photo-analyze");
+  if (!file || button.disabled) return;
+  if (file.size > 4 * 1024 * 1024) { toast("Bitte ein Foto unter 4 MB auswählen.", true); return; }
+  button.disabled = true; $("photo-status").textContent = "Mahlzeit wird ausgewertet …";
+  try {
+    const response = await fetch("/api/nutrition/photo?provider=" + encodeURIComponent($("photo-provider").value), {
+      method: "POST", headers: { "Content-Type": file.type }, body: file,
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "Fotoanalyse fehlgeschlagen.");
+    $("meal-name").value = result.meal; $("meal-kcal").value = result.calories;
+    $("photo-status").textContent = result.details + " – Schätzung prüfen, bei Bedarf ändern und mit Mahlzeit eintragen bestätigen.";
+    $("meal-kcal").focus();
+  } catch (err) { $("photo-status").textContent = err.message; }
+  finally { button.disabled = false; }
+});
+loadNutritionProviders();
+window.addEventListener("online", loadNutritionProviders);
+
+let nutritionSettings = {};
+const providerUrls = { gemini: "https://generativelanguage.googleapis.com/v1beta", openai: "https://api.openai.com/v1", deepseek: "https://api.deepseek.com/v1", custom: "" };
+function fillNutritionSettings() {
+  const name = $("api-provider").value, p = nutritionSettings[name];
+  $("api-model").value = p?.model || "";
+  $("api-url").value = p?.url || providerUrls[name];
+  $("api-key").value = "";
+  $("api-key-status").textContent = p?.has_key ? "Schlüssel gespeichert." : "Noch kein Schlüssel gespeichert.";
+}
+async function loadNutritionSettings() {
+  if (!ui.me?.user.admin) return;
+  const res = await api("/nutrition/settings");
+  nutritionSettings = res.providers;
+  $("nutrition-settings").hidden = false;
+  fillNutritionSettings();
+}
+$("api-provider").addEventListener("change", fillNutritionSettings);
+$("nutrition-settings").addEventListener("submit", async e => {
+  e.preventDefault();
+  const button = e.currentTarget.querySelector('button[type="submit"]');
+  button.disabled = true;
+  try {
+    await api("/nutrition/settings", "PUT", { provider: $("api-provider").value, model: $("api-model").value, url: $("api-url").value, key: $("api-key").value });
+    $("api-key").value = "";
+    await loadNutritionSettings(); await loadNutritionProviders(); toast("API-Einstellungen gespeichert.");
+  } catch (err) { toast(err.message, true); }
+  finally { button.disabled = false; }
+});
+$("api-remove").addEventListener("click", async () => {
+  try {
+    await api("/nutrition/settings", "PUT", {provider: $("api-provider").value, remove: true});
+    await loadNutritionSettings(); await loadNutritionProviders(); toast("Anbieter deaktiviert.");
+  } catch (err) { toast(err.message, true); }
+});
+
+document.querySelectorAll("[data-water-ml]").forEach(button => {
+  button.addEventListener("click", () => {
+    $("water-ml").value = button.dataset.waterMl;
+    $("water-ml").focus();
+  });
+});

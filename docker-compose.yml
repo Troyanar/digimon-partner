@@ -11,6 +11,18 @@ services:
       DEV: "0"
       TZ_NAME: Europe/Berlin
       TRUSTED_PROXIES: 172.18.0.0/16   # Docker-Netz des Nginx Proxy Managers (npm_default)
+      NUTRITION_GEMINI_KEY: ${NUTRITION_GEMINI_KEY:-}
+      NUTRITION_GEMINI_MODEL: ${NUTRITION_GEMINI_MODEL:-}
+      NUTRITION_GEMINI_URL: ${NUTRITION_GEMINI_URL:-https://generativelanguage.googleapis.com/v1beta}
+      NUTRITION_OPENAI_KEY: ${NUTRITION_OPENAI_KEY:-}
+      NUTRITION_OPENAI_MODEL: ${NUTRITION_OPENAI_MODEL:-}
+      NUTRITION_OPENAI_URL: ${NUTRITION_OPENAI_URL:-https://api.openai.com/v1}
+      NUTRITION_DEEPSEEK_KEY: ${NUTRITION_DEEPSEEK_KEY:-}
+      NUTRITION_DEEPSEEK_MODEL: ${NUTRITION_DEEPSEEK_MODEL:-}
+      NUTRITION_DEEPSEEK_URL: ${NUTRITION_DEEPSEEK_URL:-https://api.deepseek.com/v1}
+      NUTRITION_CUSTOM_KEY: ${NUTRITION_CUSTOM_KEY:-}
+      NUTRITION_CUSTOM_MODEL: ${NUTRITION_CUSTOM_MODEL:-}
+      NUTRITION_CUSTOM_URL: ${NUTRITION_CUSTOM_URL:-}
     volumes:
       - ./data:/data                   # beim Sichern diesen Ordner mitnehmen
     ports:

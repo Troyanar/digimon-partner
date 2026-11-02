@@ -93,6 +93,18 @@ CREATE TABLE IF NOT EXISTS progress (
     user_id INTEGER PRIMARY KEY,
     data    TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS push_subs (
+    endpoint TEXT PRIMARY KEY,          -- Adresse beim Push-Dienst (Apple/Google/Mozilla), je Gerät + Browser
+    user_id  INTEGER NOT NULL,
+    p256dh   TEXT NOT NULL,
+    auth     TEXT NOT NULL,
+    created  REAL NOT NULL,
+    used     REAL                       -- letzte zugestellte Mitteilung
+);
+CREATE TABLE IF NOT EXISTS push_memo (
+    user_id INTEGER PRIMARY KEY,
+    data    TEXT NOT NULL               -- was schon gemeldet wurde (push.due)
+);
 """
 
 
@@ -319,6 +331,42 @@ class Store:
         rows = self.conn.execute("SELECT day, steps, at FROM steps WHERE user_id = ? AND day >= ? ORDER BY day",
                                  (user_id, day)).fetchall()
         return [dict(r) for r in rows]
+
+    # --- Benachrichtigungen (Web-Push) --------------------------------------------------------
+    def add_push(self, user_id: int, endpoint: str, p256dh: str, auth: str) -> None:
+        """Ein Gerät abonniert; meldet sich dasselbe Gerät mit einem anderen Konto an, gehört es danach diesem."""
+        with self.conn:
+            self.conn.execute("INSERT INTO push_subs (endpoint, user_id, p256dh, auth, created) VALUES (?, ?, ?, ?, ?) "
+                              "ON CONFLICT (endpoint) DO UPDATE SET user_id = excluded.user_id, p256dh = excluded.p256dh, "
+                              "auth = excluded.auth", (endpoint, user_id, p256dh, auth, time.time()))
+
+    def drop_push(self, endpoint: str, user_id: int | None = None) -> None:
+        with self.conn:
+            if user_id is None:
+                self.conn.execute("DELETE FROM push_subs WHERE endpoint = ?", (endpoint,))
+            else:
+                self.conn.execute("DELETE FROM push_subs WHERE endpoint = ? AND user_id = ?", (endpoint, user_id))
+
+    def push_subs(self, user_id: int) -> list[dict]:
+        rows = self.conn.execute("SELECT endpoint, p256dh, auth, created, used FROM push_subs WHERE user_id = ?",
+                                 (user_id,)).fetchall()
+        return [dict(r) for r in rows]
+
+    def push_used(self, endpoint: str) -> None:
+        with self.conn:
+            self.conn.execute("UPDATE push_subs SET used = ? WHERE endpoint = ?", (time.time(), endpoint))
+
+    def push_users(self) -> list[int]:
+        return [r[0] for r in self.conn.execute("SELECT DISTINCT user_id FROM push_subs").fetchall()]
+
+    def push_memo(self, user_id: int) -> dict:
+        row = self.conn.execute("SELECT data FROM push_memo WHERE user_id = ?", (user_id,)).fetchone()
+        return json.loads(row["data"]) if row else {}
+
+    def save_push_memo(self, user_id: int, data: dict) -> None:
+        with self.conn:
+            self.conn.execute("INSERT INTO push_memo (user_id, data) VALUES (?, ?) "
+                              "ON CONFLICT (user_id) DO UPDATE SET data = excluded.data", (user_id, json.dumps(data)))
 
     # --- Tagebuch -----------------------------------------------------------------------
     def log(self, user_id: int, pet_id: int | None, entries: list[dict], at: float) -> None:

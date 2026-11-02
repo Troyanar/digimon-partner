@@ -62,7 +62,7 @@ def new_pet(now: float, line: str | None = None, avoid: str | None = None) -> di
         "line": line, "form": "egg", "born": now, "stage_since": now, "last_tick": now,
         "stats": {"hunger": 70.0, "thirst": 70.0, "power": 0.0, "mind": 0.0, "disc": 20.0, "mood": 70.0},
         "mistakes": 0, "period": _period(), "week": _week(now), "faul_origin": None, "wait_since": None,
-        "zero_since": {"hunger": None, "thirst": None}, "fasting": None, "water_today": 0, "today": None,
+        "zero_since": {"hunger": None, "thirst": None}, "fasting": None, "water_today": 0, "calories_today": 0, "today": None,
         "forms": [], "training": None,
     }
 
@@ -108,6 +108,7 @@ def _step(pet: dict, t: float, dt: float, s: dict) -> list[dict]:
             if pet["form"] != "egg":
                 logs.append(_log("day", "", date=pet["today"], water_ok=ok))
         pet["today"], pet["water_today"] = today, 0
+        pet["calories_today"] = 0
 
     if pet["form"] != "egg" and not asleep(t, s):
         h = dt / HOUR
@@ -252,13 +253,13 @@ def evolve(pet: dict, target: str, t: float) -> dict:
 # --- Team: pausieren und wieder aktiv machen ----------------------------------------------
 TEAM_SIZE = 3
 # Was zu dir gehört und nicht zum Digimon: wandert beim Wechsel zum neuen aktiven Partner
-CARRY = ("today", "water_today", "fasting", "training")
+CARRY = ("today", "water_today", "calories_today", "fasting", "training")
 
 
 def pause(pet: dict, now: float) -> dict:
     """Partner pausieren: seine Zeit steht still. Gibt zurück, was der nächste aktive Partner übernimmt."""
     carry = {k: pet.get(k) for k in CARRY}
-    pet.update(today=None, water_today=0, fasting=None, training=None, paused_at=now)
+    pet.update(today=None, water_today=0, calories_today=0, fasting=None, training=None, paused_at=now)
     return carry
 
 
@@ -295,11 +296,15 @@ def jogress(pet: dict, t: float, who: str) -> list[dict]:
 
 
 # --- Aktionen ------------------------------------------------------------------------------
-def drink(pet: dict, glasses: int = 1) -> list[dict]:
+def drink(pet: dict, glasses: float = 1, ml: int | None = None) -> list[dict]:
+    if ml is not None:
+        glasses = ml / 250
     pet["stats"]["thirst"] += GLASS * glasses
     pet["stats"]["mood"] += 2
     pet["water_today"] += glasses
     _clamp(pet)
+    if ml is not None:
+        return [_log("water", f"{ml} ml Wasser.", glasses=glasses, ml=ml)]
     return [_log("water", f"{glasses} Glas Wasser." if glasses == 1 else f"{glasses} Gläser Wasser.", glasses=glasses)]
 
 
@@ -433,6 +438,7 @@ def view(pet: dict, now: float, settings: dict | None = None) -> dict:
         "stage_index": L.STAGES.index(stage),
         "training": pet.get("training"),
         "fasting": fast, "asleep": asleep(now, s), "water_today": pet["water_today"], "water_goal": s["water_goal"],
+        "water_ml_today": round(pet["water_today"] * 250), "calories_today": pet.get("calories_today") or 0,
         "age_days": round((now - pet["born"]) / DAY, 1), "forms": pet["forms"],
         "perfect_week": perfect_week(pet, s) if form in L.FORM_CHANGE else None,
     }

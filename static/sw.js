@@ -3,12 +3,14 @@
 //  - 3D-Modelle (/assets): einmal geladen, bleiben sie auf dem Gerät (nur für angemeldete Nutzer erreichbar)
 //  - three.js und Schriften von außen: einmal geladen, bleiben sie
 //  - /api: nie aus dem Speicher – das übernimmt die Seite selbst (Warteschlange + Sync, siehe offline.js)
+//  - Benachrichtigungen (Web-Push): der Server schickt {title, body, tag, url}, siehe push.py
 // Ausgeliefert unter /sw.js, damit er die ganze Seite abdeckt.
 const VERSION = "partner-v1";
 const SHELL = `${VERSION}-seite`, MODELS = "partner-modelle", EXTERN = "partner-extern";
 const PRECACHE = [
   "/static/style.css", "/static/app.js", "/static/viewer.js", "/static/world.js", "/static/sound.js",
-  "/static/train.js", "/static/friends.js", "/static/device.js", "/static/offline.js", "/static/favicon.svg",
+  "/static/train.js", "/static/friends.js", "/static/device.js", "/static/offline.js", "/static/push.js", "/static/favicon.svg",
+  "/static/icons/icon-192.png",
   "https://unpkg.com/three@0.170.0/build/three.module.js",
   "https://unpkg.com/three@0.170.0/examples/jsm/loaders/FBXLoader.js",
   "https://unpkg.com/three@0.170.0/examples/jsm/loaders/OBJLoader.js",
@@ -84,4 +86,27 @@ self.addEventListener("fetch", (event) => {
   if (url.hostname === "unpkg.com" || url.hostname.endsWith("fonts.googleapis.com") || url.hostname.endsWith("fonts.gstatic.com")) {
     event.respondWith(cacheFirst(req, EXTERN));
   }
+});
+
+// --- Benachrichtigungen -------------------------------------------------------------------------
+self.addEventListener("push", (event) => {
+  let msg = {};
+  try { msg = event.data ? event.data.json() : {}; } catch { msg = { body: event.data?.text() }; }
+  event.waitUntil(self.registration.showNotification(msg.title || "Digimon-Partner", {
+    body: msg.body || "", tag: msg.tag || "partner", renotify: true, lang: "de",
+    icon: "/static/icons/icon-192.png", badge: "/static/icons/icon-192.png",
+    data: { url: msg.url || "/" },
+  }));
+});
+
+// Antippen: offene Seite nach vorn holen, sonst öffnen
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = new URL(event.notification.data?.url || "/", self.location.origin).href;
+  event.waitUntil((async () => {
+    const open = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    const hit = open.find((c) => c.url.startsWith(self.location.origin));
+    if (hit) { await hit.focus(); return; }
+    await self.clients.openWindow(url);
+  })());
 });

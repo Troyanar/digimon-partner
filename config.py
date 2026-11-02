@@ -31,3 +31,8 @@ TRUSTED_PROXIES = {p.strip() for p in os.getenv("TRUSTED_PROXIES", "127.0.0.1,::
 TZ = os.getenv("TZ_NAME", "Europe/Berlin")
 # Test-Werkzeuge (Zeit vorspulen, Training eintragen) – nur lokal einschalten, nie auf dem Server
 DEV = os.getenv("DEV", "0") == "1"
+# Web-Push (Benachrichtigungen): Schlüssel wird beim ersten Start erzeugt; Kontakt-Adresse für die Push-Dienste
+VAPID_PATH = Path(os.getenv("VAPID_PATH", DB_PATH.parent / "vapid.pem"))
+PUSH_CONTACT = os.getenv("PUSH_CONTACT", "https://partner.knuschti.de")
+# alle wie viele Sekunden der Server nachschaut, ob ein Digimon etwas braucht (0 = aus)
+PUSH_EVERY = _int_env("PUSH_EVERY", 300, 0, 86400)

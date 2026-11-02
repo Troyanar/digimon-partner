@@ -28,6 +28,22 @@ def to_stage(pet, form, now):
     pet["period"] = G._period()
 
 
+class NutritionTest(unittest.TestCase):
+    def test_daily_reset_and_partner_switch(self):
+        now = at(2026, 11, 2, 12)
+        pet = G.new_pet(now)
+        G.tick(pet, now + 1)
+        G.drink(pet, ml=700)
+        pet["calories_today"] = 650
+        other = G.new_pet(now)
+        G.resume(other, now + 1, G.pause(pet, now + 1))
+        self.assertEqual(other["calories_today"], 650)
+        self.assertAlmostEqual(other["water_today"], 2.8)
+        G.tick(other, now + G.DAY)
+        self.assertEqual(other["calories_today"], 0)
+        self.assertEqual(other["water_today"], 0)
+
+
 class GameTest(unittest.TestCase):
     def setUp(self):
         self.t0 = at(2026, 11, 2, 9)  # Montag 9 Uhr

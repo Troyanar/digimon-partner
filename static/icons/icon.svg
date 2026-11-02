@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <clipPath id="screen"><rect x="30" y="30" width="452" height="452" rx="86"/></clipPath>
+    <clipPath id="floor"><rect x="0" y="300" width="512" height="212"/></clipPath>
+  </defs>
+  <rect width="512" height="512" fill="#0c0d0f"/>
+  <g clip-path="url(#screen)">
+    <rect width="512" height="512" fill="#4cbcf6"/>
+    <g transform="translate(118 112)" fill="#ffe066"><circle r="34"/><rect x="-4" y="-66" width="8" height="18" rx="4" transform="rotate(0)"/><rect x="-4" y="-66" width="8" height="18" rx="4" transform="rotate(45)"/><rect x="-4" y="-66" width="8" height="18" rx="4" transform="rotate(90)"/><rect x="-4" y="-66" width="8" height="18" rx="4" transform="rotate(135)"/><rect x="-4" y="-66" width="8" height="18" rx="4" transform="rotate(180)"/><rect x="-4" y="-66" width="8" height="18" rx="4" transform="rotate(225)"/><rect x="-4" y="-66" width="8" height="18" rx="4" transform="rotate(270)"/><rect x="-4" y="-66" width="8" height="18" rx="4" transform="rotate(315)"/></g>
+    <g fill="#ffffff"><rect x="214" y="74" width="7" height="30" rx="3.5"/><rect x="186" y="196" width="7" height="20" rx="3.5"/><rect x="352" y="84" width="7" height="26" rx="3.5"/><rect x="408" y="136" width="7" height="38" rx="3.5"/><rect x="300" y="168" width="7" height="18" rx="3.5"/><rect x="456" y="92" width="7" height="22" rx="3.5"/></g>
+    <polygon fill="#8fd0f7" points="0,300 0,222 58,178 120,236 176,196 236,300"/>
+    <polygon fill="#8fd0f7" points="250,300 330,206 380,240 430,188 512,248 512,300"/>
+    <polygon fill="#2f9de0" points="0,300 0,262 70,236 150,300"/>
+    <polygon fill="#2f9de0" points="330,300 420,252 512,276 512,300"/>
+    <g fill="#ffffff"><rect x="392" y="248" width="16" height="16" rx="3" transform="rotate(20 392 248)"/><rect x="128" y="236" width="12" height="12" rx="3" transform="rotate(20 128 236)"/></g>
+    <rect x="0" y="300" width="512" height="212" fill="#c4ebff"/>
+    <g clip-path="url(#floor)" stroke="#7cc9f2" stroke-width="5" stroke-linecap="square"><line x1="-640" y1="512" x2="256" y2="210"/><line x1="-544" y1="512" x2="256" y2="210"/><line x1="-448" y1="512" x2="256" y2="210"/><line x1="-352" y1="512" x2="256" y2="210"/><line x1="-256" y1="512" x2="256" y2="210"/><line x1="-160" y1="512" x2="256" y2="210"/><line x1="-64" y1="512" x2="256" y2="210"/><line x1="32" y1="512" x2="256" y2="210"/><line x1="128" y1="512" x2="256" y2="210"/><line x1="224" y1="512" x2="256" y2="210"/><line x1="320" y1="512" x2="256" y2="210"/><line x1="416" y1="512" x2="256" y2="210"/><line x1="512" y1="512" x2="256" y2="210"/><line x1="608" y1="512" x2="256" y2="210"/><line x1="704" y1="512" x2="256" y2="210"/><line x1="800" y1="512" x2="256" y2="210"/><line x1="896" y1="512" x2="256" y2="210"/><line x1="992" y1="512" x2="256" y2="210"/><line x1="1088" y1="512" x2="256" y2="210"/><line x1="0" y1="318" x2="512" y2="318"/><line x1="0" y1="342" x2="512" y2="342"/><line x1="0" y1="376" x2="512" y2="376"/><line x1="0" y1="424" x2="512" y2="424"/><line x1="0" y1="492" x2="512" y2="492"/></g>
+    <ellipse cx="256" cy="400" rx="146" ry="34" fill="#eaf8ff" stroke="#8fd3fa" stroke-width="7"/>
+    <ellipse cx="256" cy="394" rx="74" ry="13" fill="#a9c2d6"/>
+    <g transform="translate(124 147) scale(8.25)" stroke-linejoin="round">
+      <path d="M16 2c6 0 10 7 10 15s-4 13-10 13S6 25 6 17 10 2 16 2z" fill="#f6f1e4" stroke="#0d2366" stroke-width="1.6"/>
+      <path d="M7 15l4-3 5 3 5-3 4 3v4l-4-3-5 3-5-3-4 3z" fill="#ffb21e"/>
+      <path d="M16 2c6 0 10 7 10 15s-4 13-10 13S6 25 6 17 10 2 16 2z" fill="none" stroke="#0d2366" stroke-width="1.6"/>
+    </g>
+  </g>
+</svg>

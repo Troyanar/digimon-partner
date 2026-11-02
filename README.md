@@ -54,3 +54,24 @@ The 3D data is not part of this repository. To create it from your own copy of t
 4. `werkzeuge/assets_bauen.py` shrinks everything into `data/assets/`.
 
 Preview of all Digimon: `vorschau-starten.bat` (gallery).
+
+## Wasser, Kalorien und Fotoanalyse
+
+Unter „Wasser & Kalorien“ lassen sich genaue Wassermengen (ml) und Mahlzeiten mit kcal erfassen.
+Kalorieneinträge zählen als Essen und beenden Fasten. Tageswerte werden täglich zurückgesetzt;
+die Einträge bleiben im Tagebuch. Manuelle Einträge funktionieren auch offline.
+
+Für die optionale Fotoanalyse in `.env` je Anbieter `NUTRITION_<ANBIETER>_KEY` und
+`NUTRITION_<ANBIETER>_MODEL` setzen (GEMINI, OPENAI, DEEPSEEK oder CUSTOM).
+Bei CUSTOM zusätzlich `NUTRITION_CUSTOM_URL` auf die OpenAI-kompatible API-Basis-URL
+setzen, z. B. `https://anbieter.example/v1`. Optional lässt sich auch bei den anderen
+Anbietern die Basis-URL über `_URL` ändern. Das Modell muss Bilder unterstützen;
+reine Textmodelle funktionieren nicht. Nach Änderungen Server neu starten.
+Fotos (JPEG/PNG/WebP bis 4 MB) werden ausschließlich zur Analyse an den ausgewählten
+Anbieter geschickt und hier nicht gespeichert. Ergebnisse vor dem Eintragen prüfen:
+Portionen und Kalorien sind Schätzungen. Ohne konfigurierte Schlüssel bleibt die manuelle Erfassung verfügbar.
+
+Getränke, Mahlzeiten und Fotoanalyse stehen im eigenen Menüpunkt „Ernährung“.
+Als Admin können Fotoanbieter unter „Mehr → Fotoanalyse: API-Einstellungen“ eingerichtet werden.
+Die Schlüssel liegen im Datenvolume (`nutrition-providers.json`, Dateirechte 600) und werden nicht an den Browser zurückgegeben.
+Die Menü-Konfiguration überschreibt die entsprechenden Umgebungsvariablen; Deaktivieren schaltet den Anbieter auch bei gesetzten Variablen aus.

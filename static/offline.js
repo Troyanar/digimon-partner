@@ -26,8 +26,8 @@ const clockText = (ts) => {
   return `${p(d.getDate())}.${p(d.getMonth() + 1)}. ${p(d.getHours())}:${p(d.getMinutes())}`;
 };
 const TEXT = {
-  water: (e) => (e.data.glasses > 1 ? `${e.data.glasses} Gläser Wasser.` : "1 Glas Wasser."),
-  eat: (e) => (e.data.cooked ? `Selbst gekocht: ${e.data.cooked}.` : "Etwas gegessen."),
+  water: (e) => e.data.ml ? `${e.data.ml} ml Wasser.` : (e.data.glasses > 1 ? `${e.data.glasses} Gläser Wasser.` : "1 Glas Wasser."),
+  eat: (e) => e.data.calories ? `${e.data.meal || "Mahlzeit"}: ${e.data.calories} kcal.` : (e.data.cooked ? `Selbst gekocht: ${e.data.cooked}.` : "Etwas gegessen."),
   fast_start: () => "Fasten gestartet.", fast_stop: () => "Fasten beendet.",
   train: (e) => `Training: ${e.data.title || e.data.plan}.`,
 };
@@ -66,8 +66,9 @@ export function setupOffline(user) {
       let t = base.now, k = 0, day = dayOf(t);
       const apply = (e) => {
         const d = e.data;
-        if (e.kind === "water") { stats.thirst += GLASS * (d.glasses || 1); stats.mood += 2; p.water_today += d.glasses || 1; }
-        if (e.kind === "eat") { p.fasting = null; stats.hunger += d.cooked ? COOKED : MEAL; stats.mood += d.cooked ? 5 : 1; }
+        const glasses = d.ml != null ? d.ml / 250 : (d.glasses || 1);
+        if (e.kind === "water") { stats.thirst += GLASS * glasses; stats.mood += 2; p.water_today += glasses; p.water_ml_today = Math.round(p.water_today * 250); }
+        if (e.kind === "eat") { p.calories_today = (p.calories_today || 0) + (d.calories || 0); p.fasting = null; stats.hunger += d.cooked ? COOKED : MEAL; stats.mood += d.cooked ? 5 : 1; }
         if (e.kind === "fast_start" && !p.fasting) {
           const start = e.at - (d.minutes_ago || 0) * 60;
           p.fasting = { start, goal: s.fast_goal, goal_at: start + s.fast_goal * 3600, hours: 0 };
@@ -86,8 +87,8 @@ export function setupOffline(user) {
       while (t < now) {
         const dt = Math.min(STEP, now - t);
         t += dt;
+        if (dayOf(t) !== day) { day = dayOf(t); p.water_today = 0; p.water_ml_today = 0; p.calories_today = 0; }
         while (k < events.length && events[k].at <= t) apply(events[k++]);
-        if (dayOf(t) !== day) { day = dayOf(t); p.water_today = 0; }
         if (p.form !== "egg" && !asleepAt(t, s)) {
           const h = dt / 3600;
           for (const [x, rate] of Object.entries(DECAY)) stats[x] = Math.max(0, stats[x] - rate * h);

@@ -419,3 +419,60 @@ body.device .btn--small { min-height: 48px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01s !important; animation-iteration-count: 1 !important; transition-duration: .01s !important; }
 }
+
+.nutrition-form { display: grid; gap: 8px; margin: 16px 0; }
+.nutrition-form .row > .input { flex: 1; width: 120px; }
+.nutrition-form .btn, .nutrition-form .input { min-height: 44px; }
+
+.nutrition select { color: var(--text); font: inherit; color-scheme: dark; }
+
+/* Ernährung bleibt auf kleinen Displays eine eigene, vollständig nutzbare Ansicht. */
+.tabs { overflow-x: auto; }
+.tabs button { flex: 1 0 auto; padding-inline: 10px; white-space: nowrap; }
+#nutrition-settings select { color: var(--text); font: inherit; color-scheme: dark; }
+#tab-ernaehrung .nutrition { margin-top: 0; }
+@media (max-width: 900px) {
+  .tabs, body.device .tabs { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); border-radius: 22px; bottom: calc(8px + env(safe-area-inset-bottom)); }
+  .tabs button, body.device .tabs button { grid-column: span 3; min-width: 0; min-height: 44px; height: 44px; font-size: 13px; padding-inline: 3px; }
+  .tabs button:nth-child(n+5) { grid-column: span 4; }
+  .home, body.device .home { padding-bottom: calc(120px + env(safe-area-inset-bottom)); }
+  .toast { bottom: calc(116px + env(safe-area-inset-bottom)); }
+  body:is([data-view="ernaehrung"], [data-view="einstellungen"]) .world { display: none; }
+  body:is([data-view="ernaehrung"], [data-view="einstellungen"]) .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); min-height: 100dvh; }
+  body.device:is([data-view="ernaehrung"], [data-view="einstellungen"]) .app { height: 100dvh; }
+  body.device:is([data-view="ernaehrung"], [data-view="einstellungen"]) .tabs { left: 8px; right: 8px; width: auto; }
+  .nutrition-form .row { flex-direction: column; }
+  .nutrition-form .row > .input { width: 100%; flex: auto; }
+  .nutrition-form .input, #nutrition-settings .input { width: 100%; font-size: 16px; }
+  .nutrition-form input[type="file"] { height: auto; padding: 10px; }
+}
+
+/* Eigene Eingaben für Ernährung, unabhängig von Betriebssystem-Widgets. */
+.nutrition { min-width: 0; }
+.nutrition .nutrition-form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin: 4px 0 0; }
+.nutrition-form label { font-weight: 500; }
+.nutrition-form .input { display: block; width: 100%; height: 50px; font: inherit; font-size: 16px; color: var(--text); background-color: var(--ground); }
+.nutrition-form .btn { width: 100%; min-height: 48px; height: auto; padding: 12px 16px; }
+.nutrition-form .btn:disabled { cursor: default; opacity: .5; }
+.nutrition-form .btn--primary { margin-top: 4px; }
+.nutrition-form .caption { line-height: 1.5; overflow-wrap: anywhere; }
+.amount-field { position: relative; }
+.amount-field .input { padding-right: 64px; font-size: 22px; font-variant-numeric: tabular-nums; appearance: textfield; -moz-appearance: textfield; }
+.amount-field input::-webkit-inner-spin-button, .amount-field input::-webkit-outer-spin-button { appearance: none; margin: 0; }
+.amount-field > span { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.amount-presets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.amount-presets .btn { padding-inline: 4px; background: var(--raised); font-size: 14px; }
+.nutrition-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.nutrition-total { font-size: 26px; font-weight: 600; }
+.nutrition-total > span:last-child { font-size: 13px; font-weight: 400; color: var(--muted); }
+.nutrition-select, #nutrition-settings select { appearance: none; -webkit-appearance: none; padding-right: 40px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a3a8b0' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; }
+.photo-picker { position: relative; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 24px 16px; background: var(--ground); border: 1px solid var(--line); border-radius: 12px; text-align: center; }
+.photo-picker svg { width: 28px; height: 28px; color: var(--muted); }
+.photo-picker label { font-weight: 500; }
+.photo-picker input[type="file"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.photo-picker:focus-within { outline: 2px solid var(--text); outline-offset: 2px; }
+.photo-picker:hover { border-color: var(--muted); }
+#photo-file-name { max-width: 100%; overflow-wrap: anywhere; }
+#meal-preview { display: block; width: 100%; max-height: 260px; object-fit: contain; border-radius: 12px; background: var(--ground); }
+
+.home > .shell, .home > .tabs, .home > .view { flex-shrink: 0; }

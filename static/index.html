@@ -6,10 +6,17 @@
 <meta name="theme-color" content="#0c0d0f">
 <title>Digimon-Partner</title>
 <link rel="icon" href="/static/favicon.svg">
+<!-- als Web-App auf dem Home-Bildschirm (iPhone: nur so gibt es Benachrichtigungen) -->
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Partner">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Russo+One&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/style.css?v=nutrition-ui-2">
 <script type="importmap">
 { "imports": { "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
                "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/" } }
@@ -44,6 +51,7 @@
 
     <nav class="tabs" id="tabs" aria-label="Bereiche">
       <button data-tab="partner" aria-current="page">Partner</button>
+      <button data-tab="ernaehrung">Ernährung</button>
       <button data-tab="training">Training</button>
       <button data-tab="freunde">Freunde<span class="tab-count num" id="friend-count"></span></button>
       <button data-tab="erfolge">Erfolge<span class="tab-count num" id="tab-count"></span></button>
@@ -58,7 +66,7 @@
       </div>
 
       <div class="actions" id="actions">
-        <button class="btn" data-act="water" id="act-water">Ein Glas Wasser</button>
+        <button class="btn" data-act="water" id="act-water">Wasser trinken</button>
         <button class="btn" data-act="eat" id="act-eat">Gegessen</button>
         <button class="btn" data-act="fast" id="act-fast">Fasten starten</button>
         <button class="btn" data-act="train" id="act-train">Training</button>
@@ -110,7 +118,7 @@
       <div class="tiles">
         <div class="tile tile--water">
           <p class="label">Wasser heute</p>
-          <p class="value num"><span id="t-water">0</span><span class="unit" id="t-water-goal"> von 8 Gläsern</span></p>
+          <p class="value num"><span id="t-water">0</span><span class="unit" id="t-water-goal"> von 2.000 ml</span></p>
           <div class="glasses" id="glasses" aria-hidden="true"></div>
         </div>
         <div class="tile">
@@ -209,6 +217,51 @@
       <button class="btn btn--primary btn--wide" id="newegg" hidden>Neues Digi-Ei legen</button>
     </section>
 
+    <section class="view" id="tab-ernaehrung" hidden>
+      <h1>Getränke &amp; Kalorien</h1>
+      <section class="card nutrition" aria-labelledby="nutrition-h">
+        <h2 id="nutrition-h">Wasser</h2>
+        <form id="water-form" class="nutrition-form">
+          <label for="water-ml">Getrunkene Menge</label>
+          <div class="amount-field"><input class="input" id="water-ml" type="number" inputmode="numeric" min="1" max="10000" step="1" value="250" required><span aria-hidden="true">ml</span></div>
+          <div class="amount-presets" aria-label="Wassermenge auswählen">
+            <button class="btn" type="button" data-water-ml="250">250 ml</button>
+            <button class="btn" type="button" data-water-ml="500">500 ml</button>
+            <button class="btn" type="button" data-water-ml="700">700 ml</button>
+          </div>
+          <button class="btn btn--primary" type="submit">Wasser eintragen</button>
+        </form>
+      </section>
+      <section class="card nutrition" aria-labelledby="meal-h">
+        <div class="nutrition-heading"><h2 id="meal-h">Mahlzeit</h2><p class="nutrition-total num"><span id="t-calories">0</span> <span>kcal heute</span></p></div>
+        <form id="calorie-form" class="nutrition-form">
+          <label for="meal-name">Was hast du gegessen? <span class="caption">Optional</span></label>
+          <input class="input" id="meal-name" maxlength="120" placeholder="z. B. Mittagessen">
+          <label for="meal-kcal">Kalorien</label>
+          <div class="amount-field"><input class="input" id="meal-kcal" type="number" inputmode="numeric" min="1" max="20000" step="1" placeholder="0" required><span aria-hidden="true">kcal</span></div>
+          <button class="btn btn--primary" type="submit">Mahlzeit eintragen</button>
+          <p class="caption">Beendet ein laufendes Fasten. Deine Einträge stehen im Tagebuch.</p>
+        </form>
+      </section>
+      <section class="card nutrition" aria-labelledby="photo-h">
+        <h2 id="photo-h">Mit Foto erfassen</h2>
+        <form id="photo-form" class="nutrition-form">
+          <label for="photo-provider">Fotoanalyse mit</label>
+          <select class="input nutrition-select" id="photo-provider"><option value="">Anbieter werden geladen …</option></select>
+          <div class="photo-picker">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M8 5l2-2h4l2 2h4v15H4V5z"/><circle cx="12" cy="12" r="4"/></svg>
+            <label for="meal-photo">Mahlzeit fotografieren oder Foto wählen</label>
+            <span class="caption" id="photo-file-name">JPEG, PNG oder WebP · bis 4 MB</span>
+            <input id="meal-photo" type="file" accept="image/jpeg,image/png,image/webp" aria-describedby="photo-file-name" required>
+          </div>
+          <img id="meal-preview" alt="Ausgewählte Mahlzeit" hidden>
+          <button class="btn" id="photo-analyze" type="submit">Foto auswerten</button>
+          <p class="caption" id="photo-status" role="status">Das Foto wird an den gewählten Anbieter gesendet. Du prüfst die Schätzung vor dem Speichern.</p>
+        </form>
+      </section>
+
+    </section>
+
     <section class="view" id="tab-training" hidden>
       <div class="greeting">
         <h1>Training</h1>
@@ -286,6 +339,17 @@
 
     <section class="view" id="tab-einstellungen" hidden>
       <h1>Einstellungen</h1>
+      <form class="card form" id="nutrition-settings" hidden aria-labelledby="api-h">
+        <h2 id="api-h">Fotoanalyse: API-Einstellungen</h2>
+        <p class="caption">Als Admin verwaltest du die Anbieter für diese App. Schlüssel werden nur auf dem Server gespeichert.</p>
+        <label>Anbieter <select class="input" id="api-provider"><option value="gemini">Gemini</option><option value="openai">OpenAI</option><option value="deepseek">DeepSeek</option><option value="custom">Anderer Anbieter</option></select></label>
+        <label>Bildfähiges Modell <input class="input" id="api-model" maxlength="120" placeholder="Modellname des Anbieters" required></label>
+        <label>API-Adresse <input class="input" id="api-url" type="url" placeholder="https://anbieter.example/v1" required></label>
+        <label>API-Schlüssel <input class="input" id="api-key" type="password" autocomplete="new-password" maxlength="512" placeholder="Neuen Schlüssel eingeben"></label>
+        <p class="caption" id="api-key-status" role="status"></p>
+        <p class="caption">Leeres Schlüsselfeld behält den gespeicherten Schlüssel. DeepSeek und andere Anbieter benötigen ein Modell mit Bildunterstützung.</p>
+        <div class="row"><button class="btn" type="submit">Anbieter speichern</button><button class="btn" type="button" id="api-remove">Anbieter deaktivieren</button></div>
+      </form>
       <form class="card form" id="settings" aria-labelledby="day-h">
         <h2 id="day-h">Dein Tag</h2>
         <div class="pair"><label>Schlafenszeit von <input class="input" name="sleep_start" inputmode="numeric" placeholder="23:00"></label>
@@ -311,6 +375,22 @@
         <p class="caption" id="pw-rule">Mindestens 8 Zeichen.</p>
         <button class="btn" type="submit">Ändern</button>
       </form>
+      <section class="card" id="pushbox" aria-labelledby="push-h">
+        <h2 id="push-h">Benachrichtigungen</h2>
+        <p class="caption">Dein Digimon meldet sich, wenn es Durst oder Hunger hat, schlecht gelaunt ist, digitiert,
+          dein Fastenziel geschafft ist oder ein Freund Jogress möchte. In seiner Schlafenszeit ist Ruhe.</p>
+        <p class="step-status" id="push-status"></p>
+        <ol class="steps-list" id="push-ios" hidden>
+          <li>Diese Seite in <b>Safari</b> öffnen.</li>
+          <li><b>Teilen</b> antippen (das Quadrat mit Pfeil, evtl. hinter „…“), dann <b>Zum Home-Bildschirm</b>.</li>
+          <li>Die App <b>Partner</b> vom Home-Bildschirm öffnen, anmelden und hier <b>Einschalten</b> tippen.</li>
+        </ol>
+        <div class="row">
+          <button class="btn btn--primary" id="push-on" hidden>Einschalten</button>
+          <button class="btn" id="push-test" hidden>Test schicken</button>
+          <button class="btn btn--danger" id="push-off" hidden>Ausschalten</button>
+        </div>
+      </section>
       <section class="card" id="stepsbox" aria-labelledby="steps-h">
         <h2 id="steps-h">Schritte vom iPhone</h2>
         <p class="caption">Ein Kurzbefehl auf dem iPhone schickt deine Schritte hierher. Jede 1.000 Schritte geben deinem Partner Kraft,
@@ -330,8 +410,10 @@
           <h3>1. Kurzbefehl bauen</h3>
           <ol class="steps-list">
             <li>App <b>Kurzbefehle</b> → <b>+</b> → Name <b>Digimon-Schritte</b>.</li>
-            <li>Aktion <b>„Health-Samples suchen“</b>: Typ <b>Schritte</b>, Filter <b>Startdatum ist heute</b>.</li>
-            <li>Aktion <b>„Statistiken berechnen“</b> (Suche: „Statistik“): <b>Summe</b> von <i>Health-Samples</i>.</li>
+            <li>In der Aktionssuche <b>Health</b> eingeben und <b>„Health-Messungen suchen“</b> nehmen (Englisch: „Find Health Samples“):
+              Typ <b>Schritte</b>, Filter <b>Startdatum ist heute</b>.
+              <span class="caption">Keine Health-Aktionen da? Die Health-App muss installiert sein, und es geht nur auf dem iPhone, nicht auf iPad oder Mac.</span></li>
+            <li>Aktion <b>„Statistiken berechnen“</b> (Suche: „Statistik“): <b>Summe</b> von <i>Health-Messungen</i>.</li>
             <li>Aktion <b>„Inhalte von URL abrufen“</b>, als Adresse:
               <div class="row"><code class="key num" id="steps-url"></code><button class="btn btn--small" id="steps-url-copy">Kopieren</button></div>
               Auf den Pfeil tippen: Methode <b>POST</b>, Anfragetext <b>JSON</b>, zwei Felder:
@@ -351,7 +433,7 @@
           <p class="caption">Warum nicht nach Uhrzeit? Solange das iPhone gesperrt ist, kommt kein Kurzbefehl an die Health-Daten.
             Beim Öffnen einer App ist es immer entsperrt. Die Seite merkt sich pro Tag den höchsten Stand, öfter schicken schadet nicht.</p>
           <p class="caption">Mit Apple Watch: Ist die Zahl höher als in der Health-App, zählen iPhone und Uhr doppelt.
-            Dann bei „Health-Samples suchen“ noch den Filter <b>Quelle</b> auf ein Gerät setzen.</p>
+            Dann bei „Health-Messungen suchen“ noch den Filter <b>Quelle</b> auf ein Gerät setzen.</p>
           <h3>Statt Kurzbefehl: Health Auto Export</h3>
           <p class="caption">Die App „Health Auto Export“ (mit Premium) kann im Hintergrund schicken: Automation „REST API“,
             Adresse wie oben, Header <code>Authorization</code> = <code>Bearer</code> + Leerzeichen + Schlüssel, Messwert <b>Schritte</b>,
@@ -388,6 +470,6 @@
 </div>
 <div class="toast" id="toast" role="status"></div>
 <div class="night" id="night" hidden><div class="night-box" id="night-box"><p class="num" id="night-clock"></p><p id="night-text"></p></div></div>
-<script type="module" src="/static/app.js"></script>
+<script type="module" src="/static/app.js?v=texture-ready-1"></script>
 </body>
 </html>

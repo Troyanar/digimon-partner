@@ -42,7 +42,6 @@ export class Viewer {
     this.sun = new THREE.DirectionalLight("#ffffff", 2.2);
     this.sun.position.set(2, 4, 3);
     this.scene.add(this.hemi, this.sun);
-    this.fbx = new FBXLoader();
     this.tex = new THREE.TextureLoader();
     this.cache = new Map();
     this.eyeOffset = { value: new THREE.Vector2(0, 0.5) };
@@ -184,8 +183,14 @@ export class Viewer {
   async _load(id) {
     if (this.cache.has(id)) return this.cache.get(id);
     const dir = `/assets/${id}/`;
-    const fbx = await this.fbx.loadAsync(dir + `${id}.fbx`).catch(() => null);
+    // FBXLoader liefert das Modell, bevor seine Körpertexturen fertig sind.
+    // Einzelbilder werden nur einmal gerendert: ohne diese Schranke bleiben sie schwarz.
+    // Pro Ladevorgang ein eigener Manager, damit andere Viewer nicht dazwischenfunken.
+    const manager = new THREE.LoadingManager();
+    const texturesReady = new Promise((resolve) => { manager.onLoad = resolve; });
+    const fbx = await new FBXLoader(manager).loadAsync(dir + `${id}.fbx`).catch(() => null);
     if (!fbx) return null;
+    await texturesReady;
     const [anims, uvs, ramp, eye] = await Promise.all([json(dir + "anim.json"), json(dir + "uv.json"),
       tex(this.tex, dir + `${id}_r00.png`, false), tex(this.tex, dir + `${id}_e00.png`)]);
     if (ramp) { ramp.minFilter = ramp.magFilter = THREE.NearestFilter; ramp.generateMipmaps = false; }

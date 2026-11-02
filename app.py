@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import base64
 import copy
 import hashlib
@@ -14,6 +15,7 @@ import time
 from datetime import date, timedelta
 from urllib.parse import urlencode
 
+import aiohttp
 from aiohttp import web
 
 import auth
@@ -22,14 +24,19 @@ import db
 import game
 import lines as L
 import progress
+import push
 import training
+import nutrition
 
 STATIC = config.BASE_DIR / "static"
 log = logging.getLogger("partner")
 store_key = web.AppKey("store", db.Store)
+vapid_key = web.AppKey("vapid", object)
+http_key = web.AppKey("http", object)
 login_limit = auth.RateLimit(8, 15 * 60)
 login_limit_all = auth.RateLimit(40, 15 * 60)
 register_limit = auth.RateLimit(5, 60 * 60)
+photo_limit = auth.RateLimit(20, 60 * 60)
 step_limit = auth.RateLimit(20, 15 * 60)  # falsche Schritte-Schlüssel
 
 ASSET_ID = re.compile(r"^(?:[a-g]\d{3}|egg\d{2})$")
@@ -79,16 +86,24 @@ def is_https(request: web.Request) -> bool:
     return request.secure or request.headers.get("X-Forwarded-Proto") == "https"
 
 
-def now_of(request: web.Request, uid: int) -> float:
+def _now(s: db.Store, uid: int) -> float:
     """Spielzeit eines Kontos. Im Test-Modus kann pro Konto vorgespult werden."""
     if config.DEV and uid:
-        return time.time() + float(store(request).settings(uid).get("dev_offset", 0))
+        return time.time() + float(s.settings(uid).get("dev_offset", 0))
     return time.time()
 
 
+def _settings(s: db.Store, uid: int) -> dict:
+    raw = s.settings(uid)
+    return {**game.DEFAULT_SETTINGS, "tz": config.TZ, **{k: v for k, v in raw.items() if k in game.DEFAULT_SETTINGS}}
+
+
+def now_of(request: web.Request, uid: int) -> float:
+    return _now(store(request), uid)
+
+
 def settings_of(request: web.Request, uid: int) -> dict:
-    s = store(request).settings(uid)
-    return {**game.DEFAULT_SETTINGS, "tz": config.TZ, **{k: v for k, v in s.items() if k in game.DEFAULT_SETTINGS}}
+    return _settings(store(request), uid)
 
 
 def now_for(request: web.Request) -> float:
@@ -101,7 +116,7 @@ def user_settings(request: web.Request) -> dict:
 
 # --- Middleware --------------------------------------------------------------------------
 # /api/steps meldet sich mit dem Schritte-Schlüssel statt mit dem Anmelde-Cookie (Kurzbefehl auf dem iPhone)
-OPEN = {"/login", "/api/login", "/api/register", "/api/me", "/dev/login", "/sw.js", "/api/steps"}
+OPEN = {"/login", "/api/login", "/api/register", "/api/me", "/dev/login", "/sw.js", "/api/steps", "/manifest.webmanifest"}
 
 
 @web.middleware
@@ -119,7 +134,8 @@ async def security_headers(request: web.Request, handler):
 async def require_login(request: web.Request, handler):
     request["user"] = store(request).session_user(request.cookies.get(auth.COOKIE), auth.SESSION_SECONDS)
     if request.method not in ("GET", "HEAD") and request.path.startswith("/api/") \
-            and request.content_type != "application/json":
+            and request.content_type != "application/json" and not (
+                request.path == "/api/nutrition/photo" and request.content_type in {"image/jpeg", "image/png", "image/webp"}):
         return fail(415, "Nur JSON")
     if request["user"] or request.path in OPEN or request.path.startswith("/static/"):
         return await handler(request)
@@ -226,6 +242,20 @@ async def service_worker(request: web.Request) -> web.StreamResponse:
     return web.FileResponse(STATIC / "sw.js", headers={"Cache-Control": "no-cache", "Content-Type": "text/javascript"})
 
 
+MANIFEST = {
+    "name": "Digimon-Partner", "short_name": "Partner", "lang": "de", "id": "/", "start_url": "/", "scope": "/",
+    "display": "standalone", "orientation": "portrait", "background_color": "#0c0d0f", "theme_color": "#0c0d0f",
+    "icons": [{"src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png"},
+              {"src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png"},
+              {"src": "/static/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}],
+}
+
+
+async def manifest(request: web.Request) -> web.Response:
+    """Macht die Seite installierbar ("Zum Home-Bildschirm") – auf dem iPhone Voraussetzung für Benachrichtigungen."""
+    return web.json_response(MANIFEST, content_type="application/manifest+json")
+
+
 async def index(request: web.Request) -> web.StreamResponse:
     resp = web.FileResponse(STATIC / "index.html", headers={"Cache-Control": "no-cache"})
     resp.set_cookie(auth.COOKIE, request.cookies[auth.COOKIE], max_age=auth.SESSION_SECONDS, httponly=True,
@@ -301,6 +331,57 @@ def _state(request: web.Request, pet: dict, now: float, settings: dict) -> dict:
             "unlocked_now": request.get("fresh", [])}
 
 
+async def nutrition_settings(request):
+    _admin(request)
+    if request.method == "PUT":
+        data = await body(request)
+        name = str(data.get("provider") or "")
+        if name not in {"gemini", "openai", "deepseek", "custom"}:
+            return fail(400, "Unbekannter Anbieter.")
+        if data.get("remove") is True:
+            nutrition.save_provider(name, {})
+        else:
+            old = nutrition.providers().get(name, {})
+            key = str(data.get("key") or old.get("key") or "").strip()
+            model = str(data.get("model") or "").strip()
+            url = str(data.get("url") or "").strip().rstrip("/")
+            from urllib.parse import urlsplit
+            parsed = urlsplit(url)
+            if not key or len(key) > 512 or not re.fullmatch(r"[A-Za-z0-9_.:/-]{1,120}", model):
+                return fail(400, "Bitte API-Schlüssel und einen gültigen Modellnamen eingeben.")
+            if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment:
+                return fail(400, "Bitte eine HTTPS-API-Adresse ohne Zugangsdaten oder Parameter eingeben.")
+            nutrition.save_provider(name, {"key": key, "model": model, "url": url})
+    return web.json_response({"providers": {name: {"model": p["model"], "url": p["url"], "has_key": bool(p["key"])}
+                                            for name, p in nutrition.providers().items()}})
+
+
+async def nutrition_providers(request):
+    return web.json_response({"providers": list(nutrition.providers())})
+
+
+async def nutrition_photo(request):
+    user_id = str(request["user"])
+    if photo_limit.blocked(user_id):
+        return fail(429, "Zu viele Fotoanalysen. Bitte später erneut versuchen.")
+    available = nutrition.providers()
+    provider = available.get(request.query.get("provider", ""))
+    if not provider:
+        return fail(400, "Diesen Foto-Anbieter bitte zuerst auf dem Server konfigurieren.")
+    mime = request.content_type
+    if mime not in {"image/jpeg", "image/png", "image/webp"}:
+        return fail(400, "Bitte JPEG, PNG oder WebP verwenden.")
+    image = await request.read()
+    if not image or len(image) > 4 * 1024 * 1024:
+        return fail(400, "Das Foto darf höchstens 4 MB groß sein.")
+    try:
+        photo_limit.hit(user_id)
+        result = await nutrition.analyze(provider, image, mime)
+    except (ValueError, aiohttp.ClientError, asyncio.TimeoutError) as exc:
+        return fail(400, str(exc) if isinstance(exc, ValueError) else "Fotoanalyse nicht erreichbar. Bitte erneut versuchen.")
+    return web.json_response(result)
+
+
 async def get_state(request: web.Request) -> web.Response:
     _, pet, now, settings = _load(request)
     return web.json_response(_state(request, pet, now, settings))
@@ -319,10 +400,25 @@ def _apply(pet: dict, kind: str, data: dict, at: float, settings: dict, when: fl
         raise ActionError("Das Ei schlüpft gleich – noch einen Moment.")
     try:
         if kind == "water":
+            if "ml" in data:
+                ml = int(data["ml"])
+                if isinstance(data["ml"], bool) or ml != float(data["ml"]) or not 1 <= ml <= 10000:
+                    raise ActionError("Bitte 1 bis 10.000 ml eingeben.")
+                return game.drink(pet, ml=ml)
             return game.drink(pet, max(1, min(4, int(data.get("glasses") or 1))))
         if kind == "eat":
             cooked = str(data.get("cooked") or "").strip()[:120] or None
-            return game.eat(pet, when, cooked, settings)
+            calories = data.get("calories")
+            if calories is not None:
+                kcal = int(calories)
+                if isinstance(calories, bool) or kcal != float(calories) or not 1 <= kcal <= 20000:
+                    raise ActionError("Bitte 1 bis 20.000 kcal eingeben.")
+            logs = game.eat(pet, when, cooked, settings)
+            if calories is not None:
+                pet["calories_today"] = (pet.get("calories_today") or 0) + kcal
+                meal = str(data.get("meal") or "Mahlzeit").strip()[:120] or "Mahlzeit"
+                logs[-1].update(text=f"{meal}: {kcal} kcal.", calories=kcal)
+            return logs
         if kind == "fast_start":
             ago = max(0.0, min(12 * 60, float(data.get("minutes_ago") or 0)))
             return game.start_fast(pet, at, settings, start=when - ago * 60)
@@ -339,7 +435,7 @@ def _apply(pet: dict, kind: str, data: dict, at: float, settings: dict, when: fl
                 raise ActionError("Das Training ging zu schnell.")
             title, art = training.PLANS[plan][0], training.PLANS[plan][1]
             return game.train(pet, art, minutes, title)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         if isinstance(exc, ActionError):
             raise
         raise ActionError("Bitte eine Zahl") from None
@@ -735,6 +831,100 @@ async def step_key(request: web.Request) -> web.Response:
     return web.json_response({"key": s.new_step_key(uid), "info": s.step_key_info(uid)})
 
 
+# --- Benachrichtigungen (Web-Push) -------------------------------------------------------------
+B64URL = re.compile(r"^[A-Za-z0-9_\-]{16,200}={0,2}$")
+
+
+def _push_check(s: db.Store, uid: int) -> list[dict]:
+    """Was der Partner gerade melden möchte (nachgerechnet als Kopie, gespeichert wird nur, was gemeldet wurde)."""
+    found = s.active_pet(uid)
+    if not found:
+        return []
+    pet_id, pet = found[0], copy.deepcopy(found[1])
+    now, settings = _now(s, uid), _settings(s, uid)
+    game.tick(pet, now, settings)
+    jog = [(r["id"], r["from_name"]) for r in s.jogress_open(uid) if r["to_id"] == uid]
+    out, memo = push.due(game.view(pet, now, settings), s.push_memo(uid), now, jog, pet_id)
+    s.save_push_memo(uid, memo)
+    return out
+
+
+async def _push_to(app: web.Application, uid: int, messages: list[dict]) -> int:
+    """An alle Geräte des Kontos. Gibt zurück, auf wie vielen es angekommen ist."""
+    s, ok_count = app[store_key], 0
+    for sub in s.push_subs(uid):
+        for m in messages:
+            ok = await push.send(app[http_key], app[vapid_key], config.PUSH_CONTACT, sub, {**m, "url": "/"})
+            if ok is False:            # Abo abgelaufen oder auf dem Gerät ausgeschaltet
+                s.drop_push(sub["endpoint"])
+                break
+            if ok:
+                s.push_used(sub["endpoint"])
+                ok_count += 1
+    return ok_count
+
+
+async def _push_loop(app: web.Application) -> None:
+    await asyncio.sleep(20)
+    while True:
+        s = app[store_key]
+        for uid in s.push_users():
+            try:
+                messages = _push_check(s, uid)
+                if messages:
+                    await _push_to(app, uid, messages)
+            except Exception:  # ein kaputtes Konto soll die anderen nicht aufhalten
+                log.exception("Push-Prüfung für Konto %s fehlgeschlagen", uid)
+        await asyncio.sleep(config.PUSH_EVERY)
+
+
+async def _push_ctx(app: web.Application):
+    app[vapid_key] = push.load_vapid(config.VAPID_PATH)
+    app[http_key] = aiohttp.ClientSession()
+    task = asyncio.create_task(_push_loop(app)) if config.PUSH_EVERY else None
+    yield
+    if task:
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
+    await app[http_key].close()
+
+
+async def push_info(request: web.Request) -> web.Response:
+    s, uid = store(request), request["user"]
+    return web.json_response({"key": push.public_key(request.app[vapid_key]), "devices": len(s.push_subs(uid))})
+
+
+async def push_subscribe(request: web.Request) -> web.Response:
+    """POST: dieses Gerät meldet sich an (Daten aus pushManager.subscribe()). DELETE: abmelden."""
+    data = await body(request)
+    s, uid = store(request), request["user"]
+    endpoint = str(data.get("endpoint") or "")
+    if len(endpoint) > 1024 or not push.allowed_endpoint(endpoint):
+        return fail(400, "Dieser Browser schickt an einen unbekannten Push-Dienst.")
+    if request.method == "DELETE":
+        s.drop_push(endpoint, uid)
+        return web.json_response({"devices": len(s.push_subs(uid))})
+    keys = data.get("keys") if isinstance(data.get("keys"), dict) else {}
+    p256dh, auth_secret = str(keys.get("p256dh") or ""), str(keys.get("auth") or "")
+    if not (B64URL.match(p256dh) and B64URL.match(auth_secret)):
+        return fail(400, "Ungültiges Abo.")
+    s.add_push(uid, endpoint, p256dh, auth_secret)
+    _push_check(s, uid)   # merkt sich den jetzigen Stand, damit nicht sofort alte Dinge gemeldet werden
+    return web.json_response({"devices": len(s.push_subs(uid))})
+
+
+async def push_test(request: web.Request) -> web.Response:
+    s, uid = store(request), request["user"]
+    found = s.active_pet(uid)
+    name = L.name_of(found[1]["form"]) if found else "Dein Digimon"
+    sent = await _push_to(request.app, uid, [{"title": f"Hallo von {name}!", "tag": "test",
+                                              "body": "So sehen meine Meldungen aus, wenn ich etwas brauche."}])
+    if not sent:
+        return fail(502, "Die Mitteilung kam nicht an. Schalte die Benachrichtigungen aus und wieder ein.")
+    return web.json_response({"sent": sent})
+
+
 # --- Einstellungen ---------------------------------------------------------------------------
 TIME = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 
@@ -867,18 +1057,24 @@ async def asset(request: web.Request) -> web.StreamResponse:
 
 
 def make_app() -> web.Application:
-    app = web.Application(middlewares=[security_headers, require_login], client_max_size=1024 * 1024)
+    app = web.Application(middlewares=[security_headers, require_login], client_max_size=4 * 1024 * 1024)
     app[store_key] = db.Store(config.DB_PATH)
+    app.cleanup_ctx.append(_push_ctx)
     app.add_routes([
         web.get("/", index),
         web.get("/login", login_page),
         web.get("/sw.js", service_worker),
+        web.get("/manifest.webmanifest", manifest),
         web.post("/api/login", login),
         web.post("/api/register", register),
         web.post("/api/logout", logout),
         web.get("/api/me", me),
         web.get("/api/state", get_state),
         web.post("/api/action", action),
+        web.get("/api/nutrition/providers", nutrition_providers),
+        web.get("/api/nutrition/settings", nutrition_settings),
+        web.put("/api/nutrition/settings", nutrition_settings),
+        web.post("/api/nutrition/photo", nutrition_photo),
         web.post("/api/egg", new_egg),
         web.post("/api/team/switch", switch_partner),
         web.get("/api/plans", get_plans),
@@ -891,6 +1087,10 @@ def make_app() -> web.Application:
         web.post("/api/steps", post_steps),
         web.post("/api/steps/key", step_key),
         web.delete("/api/steps/key", step_key),
+        web.get("/api/push", push_info),
+        web.post("/api/push", push_subscribe),
+        web.delete("/api/push", push_subscribe),
+        web.post("/api/push/test", push_test),
         web.put("/api/settings", put_settings),
         web.post("/api/password", change_password),
         web.get("/api/invites", get_invites),
